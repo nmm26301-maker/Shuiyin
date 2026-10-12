@@ -7,3 +7,9 @@ local.properties
 .DS_Store
 
 build-offline/
+
+app/libs/
+app/src/main/assets/auto_models/
+app/src/main/jniLibs/
+build-deps/
+__pycache__/

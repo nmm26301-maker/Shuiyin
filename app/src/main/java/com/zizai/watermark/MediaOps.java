@@ -21,13 +21,16 @@ import java.nio.ByteBuffer;
 public final class MediaOps {
     private MediaOps() {}
     public static Uri saveBitmap(Context ctx, Bitmap result,String filename) throws Exception {
+        return saveBitmap(ctx,result,filename,true);
+    }
+    static Uri saveBitmap(Context ctx, Bitmap result,String filename,boolean publish) throws Exception {
         Uri uri=create(ctx,"image/png",filename,"Pictures/水印工坊",MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         try {
             try(OutputStream out=ctx.getContentResolver().openOutputStream(uri,"w")) {
                 if(out==null || !result.compress(Bitmap.CompressFormat.PNG,100,out)) throw new IOException("无法输出图片");
                 out.flush();
             }
-            checkCancelled();finish(ctx,uri);
+            checkCancelled();if(publish)finish(ctx,uri);
             return uri;
         } catch(Exception e){ctx.getContentResolver().delete(uri,null,null);throw e;}
     }

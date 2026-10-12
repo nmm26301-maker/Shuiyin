@@ -1,6 +1,6 @@
 # 第三方组件与来源
 
-水印工坊 0.6.6 的原有 Android 应用组件按 GNU GPL v3 分发，完整条款见 LICENSE。原有自编图片／视频工具的 MIT 通告保留在 LICENSE-MIT。本文不是替代组件许可证。
+水印工坊 0.7.0 的原有 Android 应用组件按 GNU GPL v3 分发，完整条款见 LICENSE。原有自编图片／视频工具的 MIT 通告保留在 LICENSE-MIT。本文不是替代组件许可证。
 
 | 组件 | 版本 | 来源与许可证 |
 | --- | --- | --- |
@@ -42,3 +42,18 @@ Seal、Douyin_TikTok_Download_API、XHS-Downloader 仅作选型参考，未打�
 | certifi | 2026.7.22 | MPL-2.0；https://github.com/certifi/python-certifi |
 
 这些包使用未修改的纯 Python wheel，精确来源与 SHA-256 见 tooling/gallery-lock.json。wheel 内包含可执行的完整 Python 源码及包元数据，重建步骤见 README；没有打包它们的 C 扩展或独立网络服务。
+
+## 自动去水印与人声分离（0.7.0）
+
+| 组件 | 固定来源 | 许可证／说明 |
+| --- | --- | --- |
+| Tesseract4Android | adaptech-cz/Tesseract4Android 4.9.0 | Apache-2.0，未修改上游 AAR；内含 Tesseract、Leptonica、libjpeg、libpng 运行库，各自条款适用 |
+| Tesseract fast eng / chi_sim | tesseract-ocr/tessdata_fast 4.1.0 | Apache-2.0；使用原始 traineddata |
+| JNA | java-native-access/jna 5.18.1 | 选用 Apache-2.0（上游亦提供 LGPL-2.1-or-later 选项） |
+| sherpa-onnx C API | k2-fsa/sherpa-onnx v1.13.8 Android arm64 发布包 | Apache-2.0；未修改二进制 |
+| ONNX Runtime | 上述 sherpa-onnx 发布包内 libonnxruntime.so | MIT，保留 Microsoft 版权声明 |
+| UVR_MDXNET_9482.onnx | k2-fsa/sherpa-onnx 的 source-separation-models 发布页 | UVR / MDX-Net 模型，由 sherpa 添加元数据；原始模型来源 TRvlvr/model_repo。代码许可证不等同于单独的训练权重许可，上游模型文件没有随附独立许可证，不在此重新授权 |
+
+精确下载 URL 和 SHA-256 见 tooling/auto-lock.json。相应代码许可副本保存在 licenses/auto/。自动检测、分块 JNA 调用、保存事务及界面集成为本项目新增代码。Tesseract4Android 原生依赖及 sherpa-onnx 依赖来源可在各自上述标签的构建脚本中查阅；本项目没有重新编译这些上游二进制。
+
+UVR 来源说明：https://k2-fsa.github.io/sherpa/onnx/source-separation/models.html 。人声分离的 vocals-first 输出顺序依据 sherpa-onnx v1.13.8 的 offline-source-separation-uvr-impl.h，并通过同版实际 C API 测试。
