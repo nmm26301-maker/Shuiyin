@@ -16,10 +16,13 @@ final class LocalVideoProcessor {
         return exportRegions(context,input,speed,keepAudio,region==null?null:new float[][]{region},progress);
     }
     static Uri exportRegions(Context context,Uri input,double speed,boolean keepAudio,float[][] regions,Progress progress)throws Exception {
-        return process(context,input,speed,keepAudio,regions,false,progress);
+        return exportRegions(context,input,speed,keepAudio,regions,true,progress);
     }
-    static Uri exportAudio(Context context,Uri input,Progress progress)throws Exception{return process(context,input,1,true,null,true,progress);}
-    private static Uri process(Context context,Uri input,double speed,boolean keepAudio,float[][] regions,boolean audioOnly,Progress progress)throws Exception {
+    static Uri exportRegions(Context context,Uri input,double speed,boolean keepAudio,float[][] regions,boolean publish,Progress progress)throws Exception {
+        return process(context,input,speed,keepAudio,regions,false,publish,progress);
+    }
+    static Uri exportAudio(Context context,Uri input,Progress progress)throws Exception{return process(context,input,1,true,null,true,true,progress);}
+    private static Uri process(Context context,Uri input,double speed,boolean keepAudio,float[][] regions,boolean audioOnly,boolean publish,Progress progress)throws Exception {
         MediaExtractor extractor=new MediaExtractor();int width=0,height=0;long duration=0;boolean hasAudio=false;
         try{
             extractor.setDataSource(context,input,null);
@@ -73,7 +76,7 @@ final class LocalVideoProcessor {
             try(InputStream in=new FileInputStream(output);OutputStream out=context.getContentResolver().openOutputStream(saved,"w")){
                 if(out==null)throw new IOException("无法保存视频");byte[] bytes=new byte[65536];int n;while((n=in.read(bytes))!=-1){JobControl.check();out.write(bytes,0,n);}out.flush();
             }
-            JobControl.check();MediaOps.finish(context,saved);return saved;
+            JobControl.check();if(publish)MediaOps.finish(context,saved);return saved;
         }catch(Exception e){if(saved!=null)context.getContentResolver().delete(saved,null,null);throw e;}
         finally{delete(directory);}
     }

@@ -1,35 +1,42 @@
-# 水印工坊 0.6.6 · Android
+# 水印工坊 0.7.1 · 自动去水印与去 BGM
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 12。沿用原工程签名，可以覆盖安装 0.6.5。
+Android 10 及以上 arm64 手机开发测试版，目标 Android 13，versionCode 14。沿用 0.6.6 原签名，可覆盖安装；不必卸载旧版。
 
-## 本次扩展
+## 本次完成
 
-- 内置 gallery-dl 1.32.16 图集引擎及纯 Python 依赖，与 yt-dlp 视频／音频引擎并行使用。Instagram 作品、Pinterest、Pixiv、DeviantArt、Flickr、Imgur 等由上游图集解析器提取图片及混合媒体；登录内容可能需要本人有效 Cookie。
-- 图集引擎 973 条上游规则、视频／音频引擎 1,752 条规则均可搜索、分页查看。规则不是独立平台数量，也不表示每条规则都能成功下载。49 个常用平台入口沿用前版。
-- 多链接队列最多保留 20 条链接，支持视频／图片优先、只保存图集图片、只保存音频。重复链接在相同模式下跳过；一条链接最多提取 24 个素材。没有每日保存次数或会员额度。
-- 每个成品保存后记录媒体库地址；重试会重新解析源页面取得当前地址，并检查已保存项目是否仍存在。暂停、退出后再次打开可继续等待／失败项目，不接续旧的临时字节缓存。清理完成项目或移出队列不会删除已保存文件。
-- 队列不把视频封面作为图集原图；音频模式优先独立音频，没有时尝试从视频提取。分享多段含链接的文字可进入队列编辑页，确认添加后开始保存。
-- 图集请求保留解析器的 User-Agent 和 Referer，继续使用导入的本人 Cookie 或应用内网页会话；程序不读取其他浏览器的 Cookie。
+- **0.7.1 画质修正**：固定区域与自动去水印导出保留输入画面尺寸和帧率，避免仅擦角落水印却把 4K／高帧率素材压成 1080p／30 帧。视频仍需重新编码，效果与耗时取决于设备性能。
+
+- **默认自动去水印，无需首次框选**：本机 Tesseract OCR 识别图片及视频多个采样画面中的边缘平台文字、@账号和相关博主名称，避开中央字幕区域。视频需要水印在至少两个采样帧中出现；最多修复 8 处固定区域。未检测到可靠区域时保留画面并明确提示，不能保证识别所有水印。
+- **去 BGM 开关**：链接页可开启“保存视频时去 BGM · 保留人声”，单项、批量、队列共用；首页也可选择本地视频直接处理。内置 sherpa-onnx + UVR_MDXNET_9482 模型，无需自行配置服务器或下载模型。去 BGM 会分离人声与伴奏，保留人声，再与原视频画面合并；不是静音或简单滤波。可能残留背景音乐、损伤语音，歌曲中的人声也可能被保留。
+- **完整保存链路**：下载 → 自动识别和修复 → 可选去 BGM → 登记最终成品。处理中间文件隐藏；后续失败或取消会清理中间文件。下载与人声分离使用实际阶段进度，合回视频后才显示保存完成。
+- 保留手动多区域模式、记忆位置、暂停继续、失败重试、多链接队列。手动位置清理不再重置其他处理开关。
+- 沿用 973 条 gallery-dl 图集规则、1,752 条 yt-dlp 视频／音频规则及常用平台入口。**规则数量不是平台数量，也不代表逐站验证成功**；本次重点完成保存后的自动处理，未新增“全平台保证”。
 
 ## 使用
 
 1. 进入“链接提取”，粘贴分享链接，点“解析链接”。小红书保留专用解析；图集站优先 gallery-dl，其他站先用 yt-dlp，失败时尝试图集或网页素材。
 2. 要获取原图时点“提取图集原图”；视频封面仍明确标注为封面。
 3. 批量保存点“多链接保存队列”，粘贴多条分享文案，选择类型，添加队列并点“开始／继续”。取消当前任务后可继续；失败项目可以单独或一起重试。
-4. 首次保存图片或视频时确认去水印选区，最多 8 处，可移动、缩放和删除。平台标识与博主头像／名字分别框选，字幕留在框外。小红书底部两处建议框仅供调整，不是自动识别。
-5. 同平台、同素材类型和画面比例会记住整组选区。水印位置改变后，在“保存去水印设置”清除位置重新框选。跳过修复或关闭后保存原片，结果会说明未执行去水印。
+4. 默认自动识别去水印，不弹出框选窗口。链接页可直接打开“保存视频时去 BGM”开关；不需要去 BGM 时保持关闭。
+5. 自动识别漏检时，在菜单“保存处理设置”关闭自动识别，改用手动模式。手动模式可框选最多 8 处并记住同平台、类型和比例的位置；自动模式逐项重新识别，不复用旧位置。未执行修复的项目会在结果中说明。
 
-输出保存在系统 Pictures / Movies / Music 下的“水印工坊”，并进入作品列表。下载后处理中间原片保持隐藏，修复成功保留最终成品。真实下载字节、速度、剩余时间和处理阶段显示在科幻进度面板；单文件下载最多 2GB，保存次数不限。批次进度代表当前素材，不是全队列整体百分比。
+输出保存在系统 Pictures / Movies / Music 下的“水印工坊”，并进入作品列表。下载后处理中间原片和修复文件保持隐藏，全部选定处理成功后只发布最终成品。真实下载字节、速度、剩余时间和处理阶段显示在科幻进度面板；单文件下载最多 2GB，保存次数不限。批次进度代表当前素材，不是全队列整体百分比。
 
 ## 实际限制与验证
 
-新增图集脚本在开发主机上以打包的依赖完成 Wikimedia 公开图片解析和下载，文件通过图片解码检查。真实上游 Imgur 提取器以 API 固定样例验证图集、同站单作品委派与混合素材；Instagram、Pinterest、Pixiv、Flickr、DeviantArt 只验证 URL 路由匹配，没有逐站登录或下载验证。
+0.7.0：原有 298 项主机回归与新增 28 项自动识别／两阶段事务检查通过。真实 Tesseract 使用打包模型识别合成样例，再将检测到的位置送入生产 FFmpeg 滤镜，验证两个边缘文字水印被修复、中央字幕保留。真实 UVR 模型通过生产 JNA 绑定输出两段人声音频，验证时长、有限采样、非静音结果及取消清理。合成视频检查确认音频延迟、末尾补静音和原画面编码包保留。详细边界见 VALIDATION-0.7.0.md。
 
-现有 268 项回归、新增 30 项 Java 图集／队列检查及打包 Python 集成检查通过。双角落水印、八区域修复、选区外字幕与音轨保留仍通过生产滤镜样例检查。详细结果见 VALIDATION.md 和 VALIDATION-0.6.6.txt。
+0.7.1：新增去水印导出尺寸与 60 帧样例检查；验证记录见 VALIDATION-0.7.1.md。
 
-**未连接 Android 真机或模拟器。** 手机上的 Python 原生启动、网络、选区弹窗、队列恢复、MediaStore 和 UI 仍需设备检查；主机测试不能证明这些步骤在手机成功。图集引擎只处理当前作品，允许最多 2 层、8 个同站单作品委派，不遍历资料页、搜索页或跨站队列。目录保留完整上游规则，部分规则因此不会在本应用入口返回素材。
+**没有连接 Android 真机或模拟器。** APK 已编译、签名并检查打包完整性；Android 上的 OCR/JNA 原生加载、MediaStore、操作界面及实际素材效果仍需要设备验证。主机集成测试不能证明手机全流程已成功。
 
-需要登录、区域限制、加密保护或站点变化时可能失败。不实现 DRM 解密、移动水印跟踪或生成式视频修复；固定区域像素填补可能留痕，无法恢复被遮挡的真实内容。图片修复输出 PNG、长边最多 2560，不保留原始 EXIF；GIF 不做自动修复。视频修复输出 SDR H.264/AAC MP4，长边最多 1920、约 30fps，HDR 不支持该路径。处理期间保持应用前台；尚未实现后台下载服务。
+自动识别是 OCR 加位置／多帧规则，不是通用视觉分割或移动物体跟踪。纯图形、动态、复杂背景、低清晰度或中央水印可能漏检；像素填补会留痕，无法恢复被遮住的真实内容。图片输出 PNG、长边最多 2560、不保留 EXIF；动态 GIF 自动处理会跳过并说明。固定区域视频修复输出 SDR H.264/AAC MP4、长边最多 1920、约 30fps，HDR 不走此路径。
+
+去 BGM 仅对视频音轨生效：无音轨跳过；本地去 BGM 工具会提示。输入最多 1GB、30 分钟；需要额外缓存空间，采用有上下文的分块推理。取消在原生推理块结束后响应。仅去 BGM 时复制画面编码包，原始画质不因音频分离重编码；去水印已做的视频会沿用修复后的画面。音频重新编码为 AAC，分离质量不能由非静音测试保证。
+
+0.6.6 的图集验证保留：Wikimedia 公开图片解析下载通过；真实 Imgur 提取器使用固定 API 样例验证。Instagram、Pinterest、Pixiv、Flickr、DeviantArt 仅有路由检查，没有逐站登录下载验证。图库仅处理当前作品，最多 2 层、8 个同站单作品委派，不遍历资料页、搜索页或跨站队列。
+
+需登录、区域限制、DRM 或站点变化时可能失败；不绕过访问权限或 DRM。没有后台下载／导出服务，处理期间保持应用前台。
 
 ## 引擎与服务
 
@@ -63,16 +70,17 @@
 
 ## 构建与复现
 
-Android Studio / Gradle：JDK 17、SDK Platform 35、Build Tools 35.0.0、Gradle 8.9、AGP 8.7.3，运行 `gradle --no-daemon assembleDebug`。保留 extractNativeLibs=true / useLegacyPackaging=true，运行时需要已解压的原生程序。
+Android Studio / Gradle：JDK 17、SDK Platform 35、Build Tools 35.0.0、Gradle 8.9、AGP 8.7.3，先运行 `python3 tooling/prepare-auto.py --dir build-deps/auto`，再运行 `gradle --no-daemon assembleDebug`。保留 extractNativeLibs=true / useLegacyPackaging=true，运行时需要已解压的原生程序。
 
 手动构建：
 
 ```bash
 python3 tooling/prepare-engine.py --dir /path/to/dependencies
-python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
+python3 tooling/prepare-auto.py --dir /path/to/auto-components
+python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --auto-deps /path/to/auto-components --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.6.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.7.1.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 
@@ -86,3 +94,15 @@ python3 tests/live-gallery.py
 回归需要 Node、FFmpeg/FFprobe、Python 3、NumPy；可选公开图集网络检查还需要 Pillow。live-gallery.py 默认 Wikimedia Example.jpg，可传入其他公开图片作品 URL；不要把默认样例通过视为其他平台验证。
 
 第三方来源、许可证及构建材料见 THIRD_PARTY_NOTICES.md、LICENSE、LICENSE-MIT 和 licenses/。gallery-dl 作为独立 Python 子进程保留 GPL-2.0-only 条款，不修改其上游源码；其他组件各自许可证适用。
+
+自动处理组件来源、字节数和 SHA-256 固定在 tooling/auto-lock.json。prepare-auto.py 校验后生成 app/libs、jniLibs 与 assets/auto_models，这些大文件不提交 Git。APK 已内置它们，手机首次使用无需联网取模型。手动构建与 Gradle 均使用同一组组件。
+
+自动处理主机集成测试：
+
+```bash
+python3 tooling/test-auto.py --ecj /path/to/ecj.jar --json /path/to/org-json.jar \
+  --jna /path/to/jna-5.18.1.jar --sherpa-lib /path/to/sherpa-linux/lib \
+  --audio /path/to/audio_example.wav
+```
+
+需要 Tesseract 命令行、Pillow、NumPy、FFmpeg，以及与 APK 同版的 Linux sherpa-onnx 1.13.8；Linux 测试库不随 APK 分发。OCR 样例是合成测试画面，不是实际平台全覆盖评估。

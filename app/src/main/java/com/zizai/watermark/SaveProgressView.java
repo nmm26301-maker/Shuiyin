@@ -25,7 +25,7 @@ final class SaveProgressView extends LinearLayout {
         LinearLayout row=new LinearLayout(context);row.setOrientation(HORIZONTAL);row.setPadding(0,d(17),0,d(15));
         speed=metric(row,"实时速度");remaining=metric(row,"预计剩余");addView(row,new LayoutParams(-1,-2));
         View rule=new View(context);rule.setBackgroundColor(0xFF2F4657);addView(rule,new LayoutParams(-1,d(1)));
-        TextView note=text("下载 → 合并 / 校验 → 保存相册",11,MUTED,false);note.setGravity(Gravity.CENTER);addView(note,new LayoutParams(-1,d(38)));
+        TextView note=text("下载 → 去水印 / 去 BGM → 保存相册",11,MUTED,false);note.setGravity(Gravity.CENTER);addView(note,new LayoutParams(-1,d(38)));
         cancel=new Button(context);cancel.setText("取消保存");cancel.setTextColor(CYAN);cancel.setTextSize(13);cancel.setAllCaps(false);GradientDrawable b=new GradientDrawable();b.setColor(0xFF182D3A);b.setCornerRadius(d(13));b.setStroke(d(1),0xFF456A78);cancel.setBackground(b);addView(cancel,new LayoutParams(-1,d(44)));
         cancel.setOnClickListener(v->{cancel.setEnabled(false);cancel.setText("正在停止…");phase.setText("正在停止并清理未完成文件");cancellation.run();});
     }
@@ -37,6 +37,8 @@ final class SaveProgressView extends LinearLayout {
     void exportPercent(String label,int percent){if(!cancel.isEnabled())return;title.setText("正在导出作品");phase.setText(label);gauge.fraction=Math.max(0,Math.min(99,percent))/100.0;gauge.estimated=false;gauge.invalidate();amount.setText("编码并写入作品文件");speed.setText("—");remaining.setText("—");cancel.setVisibility(VISIBLE);}
     void complete(){title.setText("保存完成");phase.setText("文件已完成媒体库登记");if(amount.getText().toString().contains("等待"))amount.setText("可在我的文件中查看作品");gauge.fraction=1;gauge.invalidate();cancel.setVisibility(GONE);}
     void processing(){title.setText("正在处理素材");cancel.setText("取消处理");}
+    void separationPercent(String label,int percent){exportPercent(label,percent);title.setText("正在去 BGM");amount.setText("人声分离进度 · 完成后合回视频");}
+    void stage(String label){if(!cancel.isEnabled())return;processing();phase.setText(label);gauge.fraction=-1;gauge.invalidate();amount.setText("正在本机处理");speed.setText("—");remaining.setText("—");}
     private final class Gauge extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);double fraction=-1;boolean estimated;private boolean running;
         Gauge(Context c){super(c);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}

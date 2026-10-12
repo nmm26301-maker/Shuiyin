@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     private static final int PICK_FILE = 1201, PICK_LOGO=1202, PICK_BATCH=1203, PICK_BATCH_VIDEO=1205;
     private static final int BG = 0xFF0D101C, PANEL = 0xFF202536, WHITE = 0xFFF5F4FF;
     private static final int MUTED = 0xFFBAB8C3, PINK = 0xFF9475F5;
-    private enum Tool { ERASE, IMAGE_WATERMARK, AUDIO, FRAME, GIF, TRIM, MUTE, VIDEO_REMOVE, VIDEO_WATERMARK, COMPRESS, RESIZE, SPEED, MIRROR, MD5 }
+    private enum Tool { ERASE, IMAGE_WATERMARK, AUDIO, FRAME, GIF, TRIM, MUTE, VIDEO_REMOVE, VIDEO_WATERMARK, COMPRESS, RESIZE, SPEED, MIRROR, MD5, BGM, AUTO_REMOVE }
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final ExecutorService previews=Executors.newFixedThreadPool(2);
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -183,6 +183,8 @@ public class MainActivity extends Activity {
         addTool(r3,"✦","图片修复",Tool.ERASE); addTool(r3,"✎","图片水印",Tool.IMAGE_WATERMARK);
         toolbox.addView(r1,lp(-1,104)); toolbox.addView(r2,lp(-1,104)); toolbox.addView(r3,lp(-1,104));
         content.addView(toolbox); gap(content,16);
+        Button autoRepair=button("自动去水印 · 识别平台标识和博主名",0xFF233B4B);content.addView(autoRepair,lp(-1,54));autoRepair.setOnClickListener(v->choose(Tool.AUTO_REMOVE));gap(content,10);
+        Button bgm=button("去 BGM · 保留人声",0xFF6650BA);content.addView(bgm,lp(-1,54));bgm.setOnClickListener(v->choose(Tool.BGM));gap(content,10);
         Button batch=button("批量图片加水印 · 最多 30 张",PANEL);content.addView(batch,lp(-1,48));batch.setOnClickListener(v->chooseBatchImages());gap(content,10);
         Button batchVideo=button("批量视频处理 · 最多 10 个",PANEL);content.addView(batchVideo,lp(-1,48));batchVideo.setOnClickListener(v->chooseBatchVideos());gap(content,10);
         TextView note = text("本地编辑 · 链接提取需要联网",13,MUTED,false);
@@ -260,7 +262,14 @@ public class MainActivity extends Activity {
         paste.setOnClickListener(v->{String url=clipLink();if(url.isEmpty())toast("剪贴板中没有有效分享链接");else linkInput.setText(url);});
         linkInput.setText(incomingLink);
         incomingLink=LinkExtractor.extractLink(incomingLink);
-        gap(main,19);
+        gap(main,12);
+        android.content.SharedPreferences processing=getSharedPreferences("download_repair",0);
+        android.widget.CheckBox auto=check("自动去水印 · 无需框选",processing.getBoolean("enabled",true)&&processing.getBoolean("automatic",true));main.addView(auto,lp(-1,46));
+        auto.setOnCheckedChangeListener((v,on)->processing.edit().putBoolean("enabled",on).putBoolean("automatic",true).apply());
+        android.widget.CheckBox vocals=check("保存视频时去 BGM · 保留人声",processing.getBoolean("bgm",false));main.addView(vocals,lp(-1,46));
+        vocals.setOnCheckedChangeListener((v,on)->processing.edit().putBoolean("bgm",on).apply());
+        main.addView(text("本机处理 · 未识别到可靠水印会保留画面并提示",12,MUTED,false),lp(-1,30));
+        gap(main,10);
         Button parse=button("→  解析链接",0xFF8F61DF);
         main.addView(parse,lp(-1,54));
         parse.setOnClickListener(v->parseSharedLink(linkInput.getText().toString()));
@@ -386,7 +395,7 @@ public class MainActivity extends Activity {
         if(!waiting){toast("没有等待保存的链接");return;}
         try{LinkQueueStore.save(this,queue);}catch(Exception e){toast(e.getMessage());return;}
         startBusy("队列保存 · 正在准备…");runJob(()->{
-            int newlySaved=0,failed=0,unrepaired=0;boolean stop=false;
+            int newlySaved=0,failed=0,unrepaired=0,bgmCount=0;boolean stop=false;
             try{
                 for(int index=0;index<queue.entries.size();index++){
                     LinkSaveQueue.Entry entry=queue.entries.get(index);if(entry.state!=LinkSaveQueue.State.WAITING)continue;
@@ -400,7 +409,7 @@ public class MainActivity extends Activity {
                         for(int n=0;n<items.size();n++){
                             JobControl.check();LinkExtractor.Item item=items.get(n);String key=LinkSaveQueue.key(item),existing=entry.saved.get(key);
                             if(existing!=null&&queueOutputExists(existing))continue;
-                            try{SavedLink saved=saveQueueItem(item,entry.mode,prefix+"素材 "+(n+1)+" / "+items.size());rememberOutput(saved.uri);entry.saved.put(key,saved.uri.toString());LinkQueueStore.save(this,queue);newlySaved++;if(entry.mode!=LinkSaveQueue.Mode.AUDIO&&item.kind!=LinkExtractor.Kind.AUDIO&&!saved.repaired)unrepaired++;}
+                            try{SavedLink saved=saveQueueItem(item,entry.mode,prefix+"素材 "+(n+1)+" / "+items.size());rememberOutput(saved.uri);entry.saved.put(key,saved.uri.toString());LinkQueueStore.save(this,queue);newlySaved++;if(saved.bgm)bgmCount++;if(entry.mode!=LinkSaveQueue.Mode.AUDIO&&item.kind!=LinkExtractor.Kind.AUDIO&&!saved.repaired)unrepaired++;}
                             catch(Exception error){JobControl.check();errors++;lastError=ExtractionErrors.message(error);}
                         }
                         if(errors>0){entry.state=LinkSaveQueue.State.FAILED;entry.error=errors+" 项未保存。"+lastError;failed++;}
@@ -409,9 +418,9 @@ public class MainActivity extends Activity {
                     LinkQueueStore.save(this,queue);if(stop)break;
                 }
             }catch(Exception error){for(LinkSaveQueue.Entry e:queue.entries)if(e.state==LinkSaveQueue.State.RESOLVING||e.state==LinkSaveQueue.State.SAVING){e.state=LinkSaveQueue.State.PAUSED;e.error="保存记录中断，请检查空间后继续";}try{LinkQueueStore.save(this,queue);}catch(Exception ignored){}}
-            final int savedCount=newlySaved,failedCount=failed,unrepairedCount=unrepaired;final boolean paused=stop||cancelled();
+            final int savedCount=newlySaved,failedCount=failed,unrepairedCount=unrepaired,voiceCount=bgmCount;final boolean paused=stop||cancelled();
             mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();showLinkQueue();new AlertDialog.Builder(this).setTitle(paused?"队列已暂停":"队列处理结束")
-                .setMessage("本次新增保存 "+savedCount+" 项，失败链接 "+failedCount+" 条。"+(unrepairedCount>0?"其中 "+unrepairedCount+" 项图片/视频未执行去水印。":"")+"已保存成品保留在作品列表，失败和暂停项目可重新解析后继续。").setPositiveButton("查看队列",null).setNeutralButton("我的文件",(d,w)->showFiles()).show();});
+                .setMessage("本次新增保存 "+savedCount+" 项，失败链接 "+failedCount+" 条。"+(unrepairedCount>0?"其中 "+unrepairedCount+" 项图片/视频未执行去水印（未识别、关闭或跳过）。":"")+(voiceCount>0?"已去 BGM "+voiceCount+" 项。":"")+"已保存成品保留在作品列表，失败和暂停项目可重新解析后继续。").setPositiveButton("查看队列",null).setNeutralButton("我的文件",(d,w)->showFiles()).show();});
         });
     }
     private void showLinkResults(LinearLayout box,LinkExtractor.Result r) {
@@ -444,7 +453,7 @@ public class MainActivity extends Activity {
         fillLinkTab(list,r,0);
         gap(box,12);
         if(!r.items.isEmpty()) {
-            Button all=button(getSharedPreferences("download_repair",0).getBoolean("enabled",true)?"保存全部 · 自动去水印（最多 24 项）":"保存全部可下载素材（最多 24 项）",0xFF6650BA);
+            Button all=button(getSharedPreferences("download_repair",0).getBoolean("enabled",true)?(getSharedPreferences("download_repair",0).getBoolean("automatic",true)?"保存全部 · 自动去水印（最多 24 项）":"保存全部 · 手动选区去水印（最多 24 项）"):"保存全部可下载素材（最多 24 项）",0xFF6650BA);
             box.addView(all,lp(-1,51));all.setOnClickListener(v->downloadAll(r));
         }
     }
@@ -509,19 +518,37 @@ public class MainActivity extends Activity {
             empty.setGravity(Gravity.CENTER);pad(empty,15,30,15,30);parent.addView(empty,lp(-1,-2));
         }
     }
-    private static final class SavedLink {final Uri uri;final boolean repaired;SavedLink(Uri u,boolean r){uri=u;repaired=r;}}
+    private static final class SavedLink {
+        final Uri uri;final boolean repaired,bgm;final String note;
+        SavedLink(Uri u,boolean r){this(u,r,false,"已保存");}
+        SavedLink(Uri u,boolean r,boolean b,String n){uri=u;repaired=r;bgm=b;note=n;}
+    }
     private SavedLink saveDownloadedItem(LinkExtractor.Item item,String label)throws Exception {
-        LinkExtractor.Progress measured=downloadProgress(label);
-        boolean[] repaired={false};Uri output=SaveTransaction.run(new SaveTransaction.Work<Uri>(){
+        LinkExtractor.Progress measured=downloadProgress(label);DownloadRepair.Report report=new DownloadRepair.Report();
+        boolean[] bgm={false};String[] audioNote={""};
+        final boolean removeBgm=getSharedPreferences("download_repair",0).getBoolean("bgm",false)&&item.kind==LinkExtractor.Kind.VIDEO;
+        Uri output=SaveTransaction.run(new SaveTransaction.Work<Uri>(){
             public Uri download()throws Exception{return LinkExtractor.download(MainActivity.this,item,measured,false);}
             public Uri repair(Uri pending)throws Exception{
-                measured.phase("准备保存去水印");
-                Uri result=DownloadRepair.repair(MainActivity.this,pending,item,MainActivity.this::selectDownloadRepairRegion,message->updateLocalVideoProgress("去水印 · ",message));repaired[0]=result!=pending;return result;
+                return TransformTransaction.run(pending,new TransformTransaction.Work<Uri>(){
+                    public Uri repair(Uri input)throws Exception {
+                        measured.phase("准备保存去水印");
+                        return DownloadRepair.repair(MainActivity.this,input,item,MainActivity.this::selectDownloadRepairRegion,message->updateLocalVideoProgress("去水印 · ",message),report);
+                    }
+                    public Uri audio(Uri input)throws Exception {
+                        if(!removeBgm)return input;
+                        if(!BgmRemover.hasAudio(MainActivity.this,input)){audioNote[0]=" · 无音轨，无需去 BGM";return input;}
+                        measured.phase("去 BGM · 保留人声");
+                        Uri result=BgmRemover.export(MainActivity.this,input,false,message->updateLocalVideoProgress("",message));bgm[0]=true;return result;
+                    }
+                    public void publish(Uri result)throws Exception {measured.phase("正在登记成品到相册");MediaOps.finish(MainActivity.this,result);}
+                    public void discard(Uri intermediate){try{getContentResolver().delete(intermediate,null,null);}catch(Exception ignored){}}
+                });
             }
             public void publish(Uri pending)throws Exception{measured.phase("正在登记成品到相册");MediaOps.finish(MainActivity.this,pending);}
             public void discard(Uri pending){try{getContentResolver().delete(pending,null,null);}catch(Exception ignored){}}
             public void complete(){measured.complete();}
-        });return new SavedLink(output,repaired[0]);
+        });return new SavedLink(output,report.regions>0,bgm[0],report.note+(bgm[0]?" · 已分离人声并去 BGM":"")+audioNote[0]);
     }
     private float[][] selectDownloadRepairRegion(Bitmap preview,float[][] suggestions)throws Exception {
         java.util.concurrent.CompletableFuture<float[][]> choice=new java.util.concurrent.CompletableFuture<>();
@@ -556,32 +583,35 @@ public class MainActivity extends Activity {
     }
     private void showDownloadRepairSettings(){
         android.content.SharedPreferences settings=getSharedPreferences("download_repair",0);LinearLayout form=vertical();pad(form,18,10,18,10);form.setBackgroundColor(PANEL);
-        android.widget.CheckBox enabled=check("下载后自动执行区域去水印",settings.getBoolean("enabled",true));form.addView(enabled,lp(-1,48));
-        form.addView(text("首次保存可框选最多 8 处水印。成功后记住同平台、同素材类型和同画面比例的整组选区；后续单项和批量保存直接处理。图片输出 PNG，长边最多 2560；视频固定区域修复输出 SDR MP4。关闭后直接保存解析到的原片。",13,MUTED,false),lp(-1,-2));
-        new AlertDialog.Builder(this).setTitle("保存去水印设置").setView(form).setNegativeButton("取消",null)
-            .setNeutralButton("清除记住的位置",(d,w)->{settings.edit().clear().putBoolean("enabled",enabled.isChecked()).apply();toast("已清除，下次保存重新框选");})
-            .setPositiveButton("保存",(d,w)->{settings.edit().putBoolean("enabled",enabled.isChecked()).apply();toast("保存去水印设置已更新");}).show();
+        android.widget.CheckBox enabled=check("下载后去水印",settings.getBoolean("enabled",true));form.addView(enabled,lp(-1,48));
+        android.widget.CheckBox automatic=check("自动识别水印 · 无需框选",settings.getBoolean("automatic",true));form.addView(automatic,lp(-1,48));
+        android.widget.CheckBox bgm=check("保存视频时去 BGM · 保留人声",settings.getBoolean("bgm",false));form.addView(bgm,lp(-1,48));
+        form.addView(text("自动模式逐个识别画面边缘的平台名与博主名，未识别时保留原画面并提示。关闭自动识别可手动框选最多 8 处并记住位置。复杂、移动或纯图形水印可能漏检，像素修复可能留痕。\n\n去 BGM 使用本机人声分离，最多 30 分钟、1GB。可能残留音乐或损伤人声，背景歌曲的人声也可能保留；无音轨会跳过。处理期间保持应用前台。",13,MUTED,false),lp(-1,-2));
+        ScrollView scroll=new ScrollView(this);scroll.addView(form);
+        new AlertDialog.Builder(this).setTitle("保存处理设置").setView(scroll).setNegativeButton("取消",null)
+            .setNeutralButton("清除手动位置",(d,w)->{android.content.SharedPreferences.Editor edit=settings.edit();for(String key:settings.getAll().keySet())if(key.startsWith("multi2|"))edit.remove(key);edit.apply();toast("已清除手动位置，自动识别仍可使用");})
+            .setPositiveButton("保存",(d,w)->{settings.edit().putBoolean("enabled",enabled.isChecked()).putBoolean("automatic",automatic.isChecked()).putBoolean("bgm",bgm.isChecked()).apply();toast("保存处理设置已更新");if(linkScreen)showLinkExtract();}).show();
     }
     private void downloadOne(LinkExtractor.Item item) {
         if(busy)return;startBusy("正在下载素材（最大 2GB）…");
         runJob(()->{try{SavedLink result=saveDownloadedItem(item,"下载素材");
-            succeed(result.uri,item.kind==LinkExtractor.Kind.AUDIO?"音频已保存":result.repaired?"已执行多区域修复并保存，请打开检查效果":"原片已保存，本次未执行去水印");}
+            succeed(result.uri,result.note);}
             catch(Exception e){fail(e);}});
     }
     private void downloadAll(LinkExtractor.Result r) {
         if(busy||r.items.isEmpty())return;
         startBusy("正在依次保存本批素材，最多 24 项…");
         runJob(()->{
-            java.util.ArrayList<Uri> uris=new java.util.ArrayList<>();int failed=0;
+            java.util.ArrayList<Uri> uris=new java.util.ArrayList<>();int failed=0,unrepaired=0,voices=0;String lastError="";
             for(LinkExtractor.Item item:r.items) {
                 if(cancelled())break;
-                try{SavedLink saved=saveDownloadedItem(item,"保存第 "+(uris.size()+failed+1)+" / "+r.items.size()+" 项");rememberOutput(saved.uri);uris.add(saved.uri);}catch(Exception ex){if(cancelled())break;failed++;}
+                try{SavedLink saved=saveDownloadedItem(item,"保存第 "+(uris.size()+failed+1)+" / "+r.items.size()+" 项");rememberOutput(saved.uri);uris.add(saved.uri);if(item.kind!=LinkExtractor.Kind.AUDIO&&!saved.repaired)unrepaired++;if(saved.bgm)voices++;}catch(Exception ex){if(cancelled())break;failed++;lastError=ExtractionErrors.message(ex);}
             }
-            int errors=failed;
+            int errors=failed,notRepaired=unrepaired,voiceCount=voices;String errorNote=lastError;
             mainHandler.post(()->{
                 if(isFinishing()||isDestroyed())return;stopBusy();
                 new AlertDialog.Builder(this).setTitle(cancelled()?"已停止后续下载":"下载完成")
-                    .setMessage("已保存 "+uris.size()+" 项，失败 "+errors+" 项，未处理 "+Math.max(0,r.items.size()-uris.size()-errors)+" 项。\n已完成素材保留在我的文件。")
+                    .setMessage("已保存 "+uris.size()+" 项，失败 "+errors+" 项，未处理 "+Math.max(0,r.items.size()-uris.size()-errors)+" 项。\n未执行去水印 "+notRepaired+" 项，已去 BGM "+voiceCount+" 项。\n已完成素材保留在我的文件。"+(errorNote.isEmpty()?"":"\n最后失败原因："+errorNote))
                     .setPositiveButton("查看我的文件",(d,w)->showFiles())
                     .setNegativeButton("继续",null).show();
             });
@@ -762,7 +792,7 @@ public class MainActivity extends Activity {
     }
     private String title(Tool t) {
         switch(t) {
-            case AUDIO:return "提取音频"; case FRAME:return "视频取帧";case GIF:return "视频转 GIF";
+            case BGM:return "去 BGM · 保留人声";case AUTO_REMOVE:return "自动识别去水印";case AUDIO:return "提取音频"; case FRAME:return "视频取帧";case GIF:return "视频转 GIF";
             case TRIM:return "裁剪时长";case MUTE:return "视频静音";case VIDEO_WATERMARK:return "视频加水印";case COMPRESS:return "视频压缩";case RESIZE:return "裁剪尺寸";case SPEED:return "视频倍速";case VIDEO_REMOVE:return "视频固定区域修复";case MIRROR:return "水平镜像";case MD5:return "修改文件 MD5";default:return "视频工具";
         }
     }
@@ -812,6 +842,8 @@ public class MainActivity extends Activity {
     }
     private String helpFor(Tool t) {
         switch(t) {
+            case BGM:return "在本机分离人声和伴奏，将人声合回原视频。可能残留音乐或损伤人声，背景歌曲的人声也可能保留；不会简单静音。最多 30 分钟、1GB，请保持应用前台。";
+            case AUTO_REMOVE:return "无需框选，抽取多帧识别画面边缘的平台文字与博主名，避开中央字幕区，再修复固定区域。移动、纯图形或复杂水印可能漏检；未识别时会提示，不会声称去水印成功。";
             case AUDIO:return "AAC 音轨无损提取；其他可解码音轨在本机转为 AAC，导出 M4A。无音轨时会提示。";
             case FRAME:return "截取指定时间的一帧画面，输出 PNG 图片。";
             case GIF:return "取视频前 8 秒制作 320 像素宽的动态 GIF，约 4 帧/秒。";
@@ -880,6 +912,10 @@ public class MainActivity extends Activity {
         });
     }
     private Uri processSingleVideo(Tool action,Uri input,VideoTranscoder.Options options,float[][] region,long startUs,long endUs,String prefix)throws Exception {
+        if(action==Tool.BGM)return BgmRemover.export(this,input,true,message->updateLocalVideoProgress(prefix,message));
+        if(action==Tool.AUTO_REMOVE){float[][] detected=WatermarkDetector.video(this,input,message->updateLocalVideoProgress(prefix,message));
+            if(detected==null)throw new java.io.IOException("未识别到可靠水印；请使用视频固定区域修复，原片未改动");
+            return LocalVideoProcessor.exportRegions(this,input,1,true,RepairRegions.validate(detected),message->updateLocalVideoProgress(prefix,message));}
         if(action==Tool.AUDIO)return extractLocalAudio(input,prefix);
         if(action==Tool.MUTE)return MediaOps.saveRemux(this,input,false,true,0,0);
         if(action==Tool.TRIM)return MediaOps.saveRemux(this,input,false,false,startUs,endUs);
@@ -911,8 +947,8 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.6")
-        .setMessage("照片与视频在本机处理。链接提取会访问原网站；仅在配置专用服务后向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.7.0")
+        .setMessage("照片与视频在本机处理。链接提取会访问原网站；仅在配置专用服务后向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：youtubedl-android、yt-dlp、FFmpeg、Tesseract、sherpa-onnx、JNA。自动识别使用本机 OCR；去 BGM 使用 UVR 人声分离。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
     private void showFiles(){
@@ -1002,7 +1038,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void linkMenu(){new AlertDialog.Builder(this).setTitle("链接提取").setItems(new String[]{"最近提取链接","更新解析引擎","导入本人 cookies.txt","清除导入的 Cookie","专用解析服务设置","国内外平台与解析能力","保存去水印设置"},(d,k)->{
+    private void linkMenu(){new AlertDialog.Builder(this).setTitle("链接提取").setItems(new String[]{"最近提取链接","更新解析引擎","导入本人 cookies.txt","清除导入的 Cookie","专用解析服务设置","国内外平台与解析能力","保存处理设置"},(d,k)->{
         if(k==0)showLinkRecords();else if(k==1){startBusy("正在更新解析引擎…");runJob(()->{try{String result=PlatformEngine.update(this);mainHandler.post(()->{if(isDestroyed())return;stopBusy();toast(result);});}catch(Exception e){fail(e);}});}
         else if(k==2)new AlertDialog.Builder(this).setTitle("导入本人 Cookie").setMessage("选择你本人导出的 Netscape 格式 cookies.txt。文件仅保存在本应用私有目录，供内置引擎访问对应平台使用，可随时在此菜单清除。").setNegativeButton("取消",null).setPositiveButton("选择文件",(dialog,which)->{Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);pick.setType("*/*");pick.addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(pick,1204);}catch(Exception e){toast("无法打开文件选择器");}}).show();
         else if(k==3){PlatformEngine.clearCookies(this);toast("已清除 Cookie 文件");}else if(k==4)showPlatformSettings();else if(k==5)showPlatformCoverage();else showDownloadRepairSettings();
@@ -1085,7 +1121,13 @@ public class MainActivity extends Activity {
     private void updateExportProgress(String label,int percent){java.util.concurrent.atomic.AtomicBoolean token=jobCancel;mainHandler.post(()->{if(progress!=null&&jobCancel==token&&transferView!=null&&!token.get())transferView.exportPercent(label,percent);});}
     private void updateLocalVideoProgress(String prefix,String label){
         java.util.regex.Matcher m=java.util.regex.Pattern.compile("^正在处理视频 · (\\d+)%$").matcher(label);
-        if(m.find())updateExportProgress(prefix+"正在导出作品",Integer.parseInt(m.group(1)));else updateProgress(prefix+label);
+        if(m.find()){updateExportProgress(prefix+"正在导出作品",Integer.parseInt(m.group(1)));return;}
+        java.util.regex.Matcher audio=java.util.regex.Pattern.compile("^去 BGM · 分离人声 (\\d+)%$").matcher(label);
+        java.util.concurrent.atomic.AtomicBoolean token=jobCancel;
+        int percent=audio.find()?Integer.parseInt(audio.group(1)):-1;
+        mainHandler.post(()->{if(progress!=null&&jobCancel==token&&transferView!=null&&!token.get()){
+            if(percent>=0)transferView.separationPercent(prefix+label,percent);else transferView.stage(prefix+label);
+        }});
     }
     private LinkExtractor.Progress downloadProgress(String label){
         TransferStats stats=new TransferStats();java.util.concurrent.atomic.AtomicBoolean token=jobCancel;

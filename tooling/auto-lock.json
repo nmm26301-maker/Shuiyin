@@ -1,0 +1,38 @@
+[
+  {
+    "name": "sherpa-onnx-v1.13.8-android.tar.bz2",
+    "bytes": 46093321,
+    "sha256": "2ff63469a71cb6009aa2e3ed5f4a670f8abdcbe4bb9ffd23776afc792a6b4f44",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-android.tar.bz2"
+  },
+  {
+    "name": "UVR_MDXNET_9482.onnx",
+    "bytes": 29704738,
+    "sha256": "9d78f8566fa8198065214ab628be1de966a500c57786695aa4b13e2b27a7727d",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/source-separation-models/UVR_MDXNET_9482.onnx"
+  },
+  {
+    "name": "jna-5.18.1.aar",
+    "bytes": 522677,
+    "sha256": "7f053e3ec99e14dd71259c82c1c8a02738d64a13c31226b2acc170f3060951e0",
+    "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.18.1/jna-5.18.1.aar"
+  },
+  {
+    "name": "tesseract4android-4.9.0.aar",
+    "bytes": 12848454,
+    "sha256": "bce5d6413a1a5ae3d7240033fbbc851ba3217d0a08d9769400e17a077f42cb2a",
+    "url": "https://jitpack.io/cz/adaptech/tesseract4android/tesseract4android/4.9.0/tesseract4android-4.9.0.aar"
+  },
+  {
+    "name": "eng.traineddata",
+    "bytes": 4113088,
+    "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+    "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/eng.traineddata"
+  },
+  {
+    "name": "chi_sim.traineddata",
+    "bytes": 2469156,
+    "sha256": "a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730",
+    "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/chi_sim.traineddata"
+  }
+]

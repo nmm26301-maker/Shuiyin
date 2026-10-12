@@ -1,0 +1,18 @@
+{
+  "version": "0.7.0",
+  "versionCode": 13,
+  "package": "com.zizai.watermark",
+  "minSdk": 29,
+  "targetSdk": 33,
+  "abi": "arm64-v8a",
+  "bytes": 100792404,
+  "sha256": "3f7a35f18257b498476946f58d567a6de4714b70d43162e663d4cc22790dd41f",
+  "signingCertificateSha256": "7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb",
+  "hostRegressionChecks": 326,
+  "deviceTested": false,
+  "features": [
+    "automatic-edge-text-watermark-detection",
+    "offline-vocals-separation",
+    "hidden-intermediate-save-transaction"
+  ]
+}

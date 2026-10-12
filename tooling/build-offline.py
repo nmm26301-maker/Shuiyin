@@ -3,11 +3,12 @@
 Example: python3 tooling/build-offline.py --sdk /path/to/sdk --ecj /path/to/ecj.jar
 """
 import argparse,pathlib,subprocess,shutil,zipfile,os,json,hashlib,uuid
-p=argparse.ArgumentParser();p.add_argument('--sdk',default=os.getenv('ANDROID_HOME'));p.add_argument('--ecj');p.add_argument('--deps',required=True,help='Verified prepare-engine.py cache');p.add_argument('--output',default='build-offline/WatermarkWorkshop-0.6.6.apk');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--sdk',default=os.getenv('ANDROID_HOME'));p.add_argument('--ecj');p.add_argument('--deps',required=True,help='Verified prepare-engine.py cache');p.add_argument('--auto-deps',required=True,help='Verified prepare-auto.py cache');p.add_argument('--output',default='build-offline/WatermarkWorkshop-0.7.1.apk');a=p.parse_args()
 if not a.sdk:p.error('--sdk or ANDROID_HOME is required')
 root=pathlib.Path(__file__).resolve().parents[1];sdk=pathlib.Path(a.sdk).resolve();bt=sdk/'build-tools/35.0.0';android=sdk/'platforms/android-35/android.jar';build=root/'build-offline';build.mkdir(exist_ok=True)
 gallery=json.loads((root/'tooling/gallery-bundle.json').read_text())
 if hashlib.sha256((root/'app/src/main/res/raw/gallery_bundle').read_bytes()).hexdigest()!=gallery['sha256'] or gallery['sha256'] not in (root/'app/src/main/java/com/zizai/watermark/GalleryEngine.java').read_text():raise SystemExit('Gallery bundle checksum does not match installer; run gallery tests after rebuilding it')
+subprocess.run(['python3',str(root/'tooling/prepare-auto.py'),'--dir',str(pathlib.Path(a.auto_deps).resolve()),'--offline'],check=True)
 deps=pathlib.Path(a.deps).resolve();items=json.loads((root/'tooling/engine-lock.json').read_text());jars=[]
 for item in items:
  file=deps/item['name']
@@ -15,13 +16,17 @@ for item in items:
  if item['type']=='aar':
   with zipfile.ZipFile(file) as archive:(deps/item['jar']).write_bytes(archive.read('classes.jar'))
  jars.append(deps/(item.get('jar') or item['name']))
+auto_aars=sorted((root/'app/libs').glob('*.aar'))
+for file in auto_aars:
+ with zipfile.ZipFile(file) as archive:
+  jar=build/(file.stem+'.jar');jar.write_bytes(archive.read('classes.jar'));jars.append(jar)
 for directory in ('classes','dex','generated'):
  shutil.rmtree(build/directory,ignore_errors=True);(build/directory).mkdir()
 def run(*cmd):subprocess.run([str(x) for x in cmd],check=True,cwd=root)
 manifest=(root/'app/src/main/AndroidManifest.xml').read_text().replace('<manifest xmlns:', '<manifest package="com.zizai.watermark" xmlns:').replace('<application','<application android:debuggable="true"',1)
 (build/'AndroidManifest.xml').write_text(manifest)
 run(bt/'aapt2','compile','--dir',root/'app/src/main/res','-o',build/'resources.zip')
-run(bt/'aapt2','link','-o',build/'resources.apk','--manifest',build/'AndroidManifest.xml','-I',android,build/'resources.zip','--min-sdk-version','29','--target-sdk-version','33','--version-code','12','--version-name','0.6.6','--java',build/'generated','--extra-packages','com.yausername.youtubedl_android')
+run(bt/'aapt2','link','-o',build/'resources.apk','--manifest',build/'AndroidManifest.xml','-I',android,build/'resources.zip','--min-sdk-version','29','--target-sdk-version','33','--version-code','14','--version-name','0.7.1','--java',build/'generated','--extra-packages','com.yausername.youtubedl_android')
 sources=sorted((root/'app/src/main/java').rglob('*.java'))+sorted((build/'generated').rglob('*.java'))
 if a.ecj:
  # The Android platform jar contains Java platform stubs. Use the JRE module
@@ -45,6 +50,14 @@ with zipfile.ZipFile(build/'unsigned.apk','a',compression=zipfile.ZIP_DEFLATED) 
    with zipfile.ZipFile(deps/item['name']) as archive:
     for name in archive.namelist():
      if name.startswith('jni/arm64-v8a/') and name.endswith('.so'):apk.writestr(name.replace('jni/','lib/',1),archive.read(name))
+with zipfile.ZipFile(build/'unsigned.apk','a',compression=zipfile.ZIP_DEFLATED) as apk:
+ for file in (root/'app/src/main/assets').rglob('*'):
+  if file.is_file():apk.write(file,'assets/'+str(file.relative_to(root/'app/src/main/assets')))
+ for file in (root/'app/src/main/jniLibs').rglob('*.so'):apk.write(file,'lib/'+str(file.relative_to(root/'app/src/main/jniLibs')))
+ for file in auto_aars:
+  with zipfile.ZipFile(file) as archive:
+   for name in archive.namelist():
+    if name.startswith('jni/arm64-v8a/') and name.endswith('.so'):apk.writestr(name.replace('jni/','lib/',1),archive.read(name))
 run(bt/'zipalign','-f','4',build/'unsigned.apk',build/'aligned.apk')
 key=root/'tooling/development.jks'
 if not key.exists():run('keytool','-genkeypair','-keystore',key,'-storepass','android','-keypass','android','-alias','androiddebugkey','-keyalg','RSA','-keysize','2048','-validity','10000','-dname','CN=WatermarkWorkshop Development')

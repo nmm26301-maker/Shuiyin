@@ -23,6 +23,9 @@ check(a['codec_name']=='aac' and abs(float(info['format']['duration'])-2)<.1,'so
 pcm=np.frombuffer(subprocess.check_output(['ffmpeg','-v','error','-i',str(folder/'repaired.mp4'),'-vn','-ar','48000','-ac','1','-f','s16le','-']),dtype='<i2')[12000:60000].astype(float)
 freq=np.fft.rfftfreq(len(pcm),1/48000)[np.argmax(abs(np.fft.rfft(pcm*np.hanning(len(pcm)))))]
 check(abs(freq-440)<3,'440Hz audio pitch kept')
+high=json.loads(subprocess.check_output(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width,height,avg_frame_rate,nb_frames','-of','json',str(folder/'high-rate-repaired.mp4')]))['streams'][0]
+check((high['width'],high['height'])==(960,540),'repair preserves source dimensions')
+check(high['avg_frame_rate']=='60/1' and int(high['nb_frames'])==30,'repair preserves all 60 fps frames')
 eight=frame('eight-repaired.mp4')
 for i in range(8):
     x=20+i*72;check(abs(eight[316:336,x+5:x+31]-np.array([0,0,255])).mean()<8,'logo '+str(i+1)+' repaired')
