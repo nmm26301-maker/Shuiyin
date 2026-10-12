@@ -26,6 +26,8 @@ public final class MultiRegionTests {
         int[][] regions=VideoFilters.regions(boxes,640,360);String filters=VideoFilters.videoRegions(1,regions);
         check(filters.split("delogo=",-1).length-1==2,"both regions become actual delogo filters");
         check(!filters.contains("crop="),"video is not cropped to remove marks");
+        check(!filters.contains("scale=")&&!filters.contains("fps="),"watermark repair keeps source resolution and frame rate");
+        check(VideoFilters.videoRegions(2,null).contains("fps=30"),"speed conversion keeps its bounded export");
         int[][] hd=VideoFilters.regions(boxes,1280,720);check(hd[1][0]>1000,"region coordinates follow real resolution");
         int[][] tiny=VideoFilters.regions(suggested,180,320);for(int[] r:tiny)check(r[0]>=2&&r[1]>=2&&r[0]+r[2]<=178&&r[1]+r[3]<=318,"bottom-edge filter retains sampling border");
         Path folder=Paths.get(args[0]);Files.createDirectories(folder);Path input=folder.resolve("two-marks.mp4"),output=folder.resolve("repaired.mp4");
@@ -37,6 +39,10 @@ public final class MultiRegionTests {
         Path marked8=folder.resolve("eight-marks.mp4"),repaired8=folder.resolve("eight-repaired.mp4");
         run(Arrays.asList("ffmpeg","-hide_banner","-y","-loglevel","error","-f","lavfi","-i","color=blue:size=640x360:rate=30:duration=1","-vf",draw.toString(),"-c:v","libx264","-threads","2",marked8.toString()));
         command=new ArrayList<>();command.add("ffmpeg");command.addAll(VideoFilters.exportRegionArguments(marked8.toString(),repaired8.toString(),1,VideoFilters.regions(eight,640,360),false));run(command);check(Files.size(repaired8)>1000,"eight-region filter runs successfully");
+        Path highRate=folder.resolve("high-rate.mp4"),highRateRepaired=folder.resolve("high-rate-repaired.mp4");
+        run(Arrays.asList("ffmpeg","-hide_banner","-y","-loglevel","error","-f","lavfi","-i","color=blue:size=960x540:rate=60:duration=0.5","-vf","drawbox=x=20:y=480:w=100:h=32:color=white:t=fill","-c:v","libx264","-threads","2",highRate.toString()));
+        command=new ArrayList<>();command.add("ffmpeg");command.addAll(VideoFilters.exportRegionArguments(highRate.toString(),highRateRepaired.toString(),1,VideoFilters.regions(new float[][]{{.015f,.88f,.14f,.97f}},960,540),false));run(command);
+        check(Files.size(highRateRepaired)>1000,"high-frame-rate repair creates video");
         System.out.println("PASS multi-region: "+checks+" checks; production filters used for 2 and 8 logos");
     }
 }

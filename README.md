@@ -1,8 +1,10 @@
-# 水印工坊 0.7.0 · 自动去水印与去 BGM
+# 水印工坊 0.7.1 · 自动去水印与去 BGM
 
-Android 10 及以上 arm64 手机开发测试版，目标 Android 13，versionCode 13。沿用 0.6.6 原签名，可覆盖安装；不必卸载旧版。
+Android 10 及以上 arm64 手机开发测试版，目标 Android 13，versionCode 14。沿用 0.6.6 原签名，可覆盖安装；不必卸载旧版。
 
 ## 本次完成
+
+- **0.7.1 画质修正**：固定区域与自动去水印导出保留输入画面尺寸和帧率，避免仅擦角落水印却把 4K／高帧率素材压成 1080p／30 帧。视频仍需重新编码，效果与耗时取决于设备性能。
 
 - **默认自动去水印，无需首次框选**：本机 Tesseract OCR 识别图片及视频多个采样画面中的边缘平台文字、@账号和相关博主名称，避开中央字幕区域。视频需要水印在至少两个采样帧中出现；最多修复 8 处固定区域。未检测到可靠区域时保留画面并明确提示，不能保证识别所有水印。
 - **去 BGM 开关**：链接页可开启“保存视频时去 BGM · 保留人声”，单项、批量、队列共用；首页也可选择本地视频直接处理。内置 sherpa-onnx + UVR_MDXNET_9482 模型，无需自行配置服务器或下载模型。去 BGM 会分离人声与伴奏，保留人声，再与原视频画面合并；不是静音或简单滤波。可能残留背景音乐、损伤语音，歌曲中的人声也可能被保留。
@@ -23,6 +25,8 @@ Android 10 及以上 arm64 手机开发测试版，目标 Android 13，versionCo
 ## 实际限制与验证
 
 0.7.0：原有 298 项主机回归与新增 28 项自动识别／两阶段事务检查通过。真实 Tesseract 使用打包模型识别合成样例，再将检测到的位置送入生产 FFmpeg 滤镜，验证两个边缘文字水印被修复、中央字幕保留。真实 UVR 模型通过生产 JNA 绑定输出两段人声音频，验证时长、有限采样、非静音结果及取消清理。合成视频检查确认音频延迟、末尾补静音和原画面编码包保留。详细边界见 VALIDATION-0.7.0.md。
+
+0.7.1：新增去水印导出尺寸与 60 帧样例检查；验证记录见 VALIDATION-0.7.1.md。
 
 **没有连接 Android 真机或模拟器。** APK 已编译、签名并检查打包完整性；Android 上的 OCR/JNA 原生加载、MediaStore、操作界面及实际素材效果仍需要设备验证。主机集成测试不能证明手机全流程已成功。
 
@@ -76,7 +80,7 @@ python3 tooling/prepare-auto.py --dir /path/to/auto-components
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --auto-deps /path/to/auto-components --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.7.0.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.7.1.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

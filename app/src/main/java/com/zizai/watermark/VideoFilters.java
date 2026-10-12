@@ -28,8 +28,13 @@ final class VideoFilters {
         tempo(speed);List<String> filters=new ArrayList<>();
         if(rectangles!=null)for(int[] r:rectangles)filters.add("delogo=x="+r[0]+":y="+r[1]+":w="+r[2]+":h="+r[3]+":show=0");
         filters.add("setpts=PTS/"+number(speed));
-        filters.add("scale=w='min(iw,1920)':h='min(ih,1920)':force_original_aspect_ratio=decrease:force_divisible_by=2");
-        filters.add("fps=30");return String.join(",",filters);
+        // Repairing a mark must not silently shrink a 4K video or discard high-frame-rate frames.
+        // Keep the established bounded export for the separate speed conversion tool.
+        if(rectangles==null||speed!=1){
+            filters.add("scale=w='min(iw,1920)':h='min(ih,1920)':force_original_aspect_ratio=decrease:force_divisible_by=2");
+            filters.add("fps=30");
+        }
+        return String.join(",",filters);
     }
     static int[][] regions(float[][] boxes,int width,int height)throws IOException {
         boxes=RepairRegions.validate(boxes);int[][] result=new int[boxes.length][];
