@@ -1,0 +1,77 @@
+[
+  {
+    "name": "library-0.18.1.aar",
+    "url": "https://repo.maven.apache.org/maven2/io/github/junkfood02/youtubedl-android/library/0.18.1/library-0.18.1.aar",
+    "sha256": "579b5fb480892b1abc2b218c2089699d52759cc8d7ba256bf876453f0365faef",
+    "type": "aar",
+    "jar": "library.jar"
+  },
+  {
+    "name": "common-0.18.1.aar",
+    "url": "https://repo.maven.apache.org/maven2/io/github/junkfood02/youtubedl-android/common/0.18.1/common-0.18.1.aar",
+    "sha256": "e0c0530bdbdf203e1598e900085d3582e27360731872872f3a67f23a9b24c0b5",
+    "type": "aar",
+    "jar": "common.jar"
+  },
+  {
+    "name": "ffmpeg-0.18.1.aar",
+    "url": "https://repo.maven.apache.org/maven2/io/github/junkfood02/youtubedl-android/ffmpeg/0.18.1/ffmpeg-0.18.1.aar",
+    "sha256": "0a87ffa6cf912b0fe76c1a99b9107f543ee2f247935fae2c71f0822eb7bc5f49",
+    "type": "aar",
+    "jar": "ffmpeg.jar"
+  },
+  {
+    "name": "kotlin-stdlib-1.7.22.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.7.22/kotlin-stdlib-1.7.22.jar",
+    "sha256": "f98505f50a6a1c1dc002d6102e4b419af93d011d5a10696e75a38935a96ea92f",
+    "type": "jar"
+  },
+  {
+    "name": "kotlin-stdlib-jdk7-1.7.22.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk7/1.7.22/kotlin-stdlib-jdk7-1.7.22.jar",
+    "sha256": "ade7768d98940a303856529af373f75ffd5e2695b4dc198e9b18396afa53f9e0",
+    "type": "jar"
+  },
+  {
+    "name": "kotlin-stdlib-jdk8-1.7.22.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk8/1.7.22/kotlin-stdlib-jdk8-1.7.22.jar",
+    "sha256": "315102ff1cc2e706286b227147b8db23783db911a89298976a90a22e071cd117",
+    "type": "jar"
+  },
+  {
+    "name": "annotations-13.0.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+    "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+    "type": "jar"
+  },
+  {
+    "name": "jackson-core-2.11.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-core/2.11.1/jackson-core-2.11.1.jar",
+    "sha256": "25461dbfb431cb48e30118a0277671de8e8a56a3b1198492e24b2fb605d7575e",
+    "type": "jar"
+  },
+  {
+    "name": "jackson-databind-2.11.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.11.1/jackson-databind-2.11.1.jar",
+    "sha256": "b486be39d9ff4ae8bc7782792f2ea70f3a7bdaee5bd13780d295d7674231afd6",
+    "type": "jar"
+  },
+  {
+    "name": "jackson-annotations-2.11.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.11.1/jackson-annotations-2.11.1.jar",
+    "sha256": "045e61b0b4a347d12b86cf2d0e776dea6a79204ae12095c2b08906d29e594a5a",
+    "type": "jar"
+  },
+  {
+    "name": "commons-io-2.5.jar",
+    "url": "https://repo.maven.apache.org/maven2/commons-io/commons-io/2.5/commons-io-2.5.jar",
+    "sha256": "a10418348d234968600ccb1d988efcbbd08716e1d96936ccc1880e7d22513474",
+    "type": "jar"
+  },
+  {
+    "name": "commons-compress-1.12.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/apache/commons/commons-compress/1.12/commons-compress-1.12.jar",
+    "sha256": "2c1542faf343185b7cab9c3d55c8ae5471d6d095d3887a4adefdbdf2984dc0b6",
+    "type": "jar"
+  }
+]

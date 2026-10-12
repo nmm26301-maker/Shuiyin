@@ -1,0 +1,447 @@
+{
+  "engineVersion": "2026.08.19",
+  "extractorCount": 1752,
+  "platforms": [
+    {
+      "name": "YouTube",
+      "extractor": "youtube",
+      "displayName": "YouTube",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.youtube.com/watch?v=BaW_jenozKc",
+      "upstreamBroken": false
+    },
+    {
+      "name": "TikTok",
+      "extractor": "TikTok",
+      "displayName": "TikTok",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.tiktok.com/@test/video/7000000000000000000",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Douyin",
+      "extractor": "Douyin",
+      "displayName": "抖音",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.douyin.com/video/7000000000000000000",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Bilibili",
+      "extractor": "BiliBili",
+      "displayName": "哔哩哔哩",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.bilibili.com/video/BV1xx411c7mD",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Xiaohongshu",
+      "extractor": "XiaoHongShu",
+      "displayName": "小红书",
+      "mode": "专用笔记解析",
+      "region": "国内",
+      "sample": "https://www.xiaohongshu.com/explore/69d77b3400000000230058e7",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Kuaishou",
+      "extractor": null,
+      "displayName": "快手",
+      "mode": "网页辅助",
+      "region": "国内",
+      "sample": "https://www.kuaishou.com/short-video/abcdef",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Weibo",
+      "extractor": "Weibo",
+      "displayName": "微博",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://weibo.com/1234567890/AbCdEf",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Instagram",
+      "extractor": "Instagram",
+      "displayName": "Instagram",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.instagram.com/reel/AbCdEf/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Facebook",
+      "extractor": "facebook",
+      "displayName": "Facebook",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.facebook.com/watch/?v=1234567890",
+      "upstreamBroken": false
+    },
+    {
+      "name": "X / Twitter",
+      "extractor": "twitter",
+      "displayName": "X",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://x.com/test/status/1234567890123456789",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Reddit",
+      "extractor": "Reddit",
+      "displayName": "Reddit",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.reddit.com/r/videos/comments/abcdef/test/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Pinterest",
+      "extractor": "Pinterest",
+      "displayName": "Pinterest",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.pinterest.com/pin/123456789012345678/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Vimeo",
+      "extractor": "vimeo",
+      "displayName": "Vimeo",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://vimeo.com/123456789",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Dailymotion",
+      "extractor": "dailymotion",
+      "displayName": "Dailymotion",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.dailymotion.com/video/x123abc",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Twitch",
+      "extractor": "twitch:vod",
+      "displayName": "Twitch",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.twitch.tv/videos/123456789",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Niconico",
+      "extractor": "niconico",
+      "displayName": "Niconico",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.nicovideo.jp/watch/sm12345678",
+      "upstreamBroken": false
+    },
+    {
+      "name": "SoundCloud",
+      "extractor": "soundcloud",
+      "displayName": "SoundCloud",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://soundcloud.com/test/track",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Bandcamp",
+      "extractor": "Bandcamp",
+      "displayName": "Bandcamp",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://test.bandcamp.com/track/song",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Bluesky",
+      "extractor": "Bluesky",
+      "displayName": "Bluesky",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://bsky.app/profile/test.bsky.social/post/3abcdef123456",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Threads",
+      "extractor": null,
+      "displayName": "Threads",
+      "mode": "网页辅助",
+      "region": "国际",
+      "sample": "https://www.threads.net/@test/post/AbCdEf",
+      "upstreamBroken": false
+    },
+    {
+      "name": "VK",
+      "extractor": "vk",
+      "displayName": "VK",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://vk.com/video-12345_67890",
+      "upstreamBroken": false
+    },
+    {
+      "name": "OK",
+      "extractor": "Odnoklassniki",
+      "displayName": "OK",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://ok.ru/video/123456789",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Rutube",
+      "extractor": "rutube",
+      "displayName": "Rutube",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://rutube.ru/video/0123456789abcdef0123456789abcdef/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Rumble",
+      "extractor": "Rumble",
+      "displayName": "Rumble",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://rumble.com/v123abc-test.html",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Naver",
+      "extractor": "Naver",
+      "displayName": "Naver",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://tv.naver.com/v/12345678",
+      "upstreamBroken": false
+    },
+    {
+      "name": "SOOP",
+      "extractor": "soop",
+      "displayName": "SOOP",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://vod.sooplive.com/player/12345678",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Telegram",
+      "extractor": "telegram:embed",
+      "displayName": "Telegram",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://t.me/test/1234",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Snapchat",
+      "extractor": "SnapchatSpotlight",
+      "displayName": "Snapchat",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.snapchat.com/spotlight/abc123",
+      "upstreamBroken": false
+    },
+    {
+      "name": "AcFunVideo",
+      "extractor": "AcFunVideo",
+      "displayName": "AcFun",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.acfun.cn/v/ac35457073",
+      "upstreamBroken": false
+    },
+    {
+      "name": "youku",
+      "extractor": "youku",
+      "displayName": "优酷",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://player.youku.com/player.php/sid/XNDgyMDQ2NTQw/v.swf",
+      "upstreamBroken": false
+    },
+    {
+      "name": "iqiyi",
+      "extractor": "iqiyi",
+      "displayName": "爱奇艺",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.iqiyi.com/v_19rrojlavg.html",
+      "upstreamBroken": false
+    },
+    {
+      "name": "vqq:video",
+      "extractor": "vqq:video",
+      "displayName": "腾讯视频",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://v.qq.com/x/page/q326831cny0.html",
+      "upstreamBroken": false
+    },
+    {
+      "name": "MangoTV",
+      "extractor": "MangoTV",
+      "displayName": "芒果TV",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.mgtv.com/v/1/290525/f/3116640.html",
+      "upstreamBroken": false
+    },
+    {
+      "name": "ximalaya",
+      "extractor": "ximalaya",
+      "displayName": "喜马拉雅",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.ximalaya.com/sound/47740352/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Zhihu",
+      "extractor": "Zhihu",
+      "displayName": "知乎视频",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://www.zhihu.com/zvideo/1342930761977176064",
+      "upstreamBroken": false
+    },
+    {
+      "name": "qqmusic",
+      "extractor": "qqmusic",
+      "displayName": "QQ音乐",
+      "mode": "内置站点适配",
+      "region": "国内",
+      "sample": "https://y.qq.com/n/ryqq/songDetail/004Ti8rT003TaZ",
+      "upstreamBroken": false
+    },
+    {
+      "name": "LinkedIn",
+      "extractor": "LinkedIn",
+      "displayName": "LinkedIn",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.linkedin.com/posts/mishalkhawaja_sendinblueviews-toronto-digitalmarketing-ugcPost-6850898786781339649-mM20",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Tumblr",
+      "extractor": "Tumblr",
+      "displayName": "Tumblr",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://tatianamaslanydaily.tumblr.com/post/54196191430/orphan-black-dvd-extra-behind-the-scenes",
+      "upstreamBroken": false
+    },
+    {
+      "name": "TedTalk",
+      "extractor": "TedTalk",
+      "displayName": "TED",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.ted.com/talks/candace_parker_how_to_break_down_barriers_and_not_accept_limits",
+      "upstreamBroken": false
+    },
+    {
+      "name": "bbc",
+      "extractor": "bbc",
+      "displayName": "BBC",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.bbc.com/news/world-europe-32668511",
+      "upstreamBroken": false
+    },
+    {
+      "name": "ESPN",
+      "extractor": "ESPN",
+      "displayName": "ESPN",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://espn.go.com/video/clip?id=10365079",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Coub",
+      "extractor": "Coub",
+      "displayName": "Coub",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://coub.com/view/5u5n1",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Streamable",
+      "extractor": "Streamable",
+      "displayName": "Streamable",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://streamable.com/dnd1",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Imgur",
+      "extractor": "Imgur",
+      "displayName": "Imgur",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://imgur.com/A61SaA1",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Flickr",
+      "extractor": "Flickr",
+      "displayName": "Flickr",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.flickr.com/photos/forestwander-nature-pictures/5645318632/in/photostream/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "yandexmusic:track",
+      "extractor": "yandexmusic:track",
+      "displayName": "Yandex Music",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://music.yandex.ru/album/540508/track/4878838",
+      "upstreamBroken": false
+    },
+    {
+      "name": "BitChute",
+      "extractor": "BitChute",
+      "displayName": "BitChute",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.bitchute.com/video/UGlrF9o9b-Q/",
+      "upstreamBroken": false
+    },
+    {
+      "name": "Bigo",
+      "extractor": "Bigo",
+      "displayName": "Bigo Live",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.bigo.tv/ja/221338632",
+      "upstreamBroken": false
+    },
+    {
+      "name": "mixcloud",
+      "extractor": "mixcloud",
+      "displayName": "Mixcloud",
+      "mode": "内置站点适配",
+      "region": "国际",
+      "sample": "https://www.mixcloud.com/dholbach/cryptkeeper/",
+      "upstreamBroken": false
+    }
+  ]
+}

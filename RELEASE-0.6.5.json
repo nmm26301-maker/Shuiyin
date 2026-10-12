@@ -1,0 +1,11 @@
+{
+  "version": "0.6.5",
+  "versionCode": 11,
+  "apk_sha256": "a679884ad80b474fe5384083ecdf834ebe069cb51e310e6a30ada418aefbb79a",
+  "apk_size_bytes": 54936751,
+  "checks": 268,
+  "device_tested": false,
+  "platform_routes": 49,
+  "extractor_rules": 1752,
+  "max_repair_regions": 8
+}

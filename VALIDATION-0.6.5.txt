@@ -1,0 +1,11 @@
+PASS link extraction: 31 checks (production metadata parser, structured media, signatures, cancellation)
+PASS engine integration: 16 checks
+PASS XHS: 29 checks
+PASS transfer: 46 checks; real ZIP download progress and exact output
+PASS platform routes: 51 checks; 1752 extractor rules. URL matching only, not live download verification.
+PASS save workflow: 40 checks; real HTTP truncation/resume and pending repair lifecycle
+PASS web scanner: 8 checks; executed actual WebView script with DOM fixtures
+PASS repaired media: 6 checks; watermark pixels, surrounding image and audio verified
+PASS multi-region: 20 checks; production filters used for 2 and 8 logos
+PASS multi-region media: 17 checks; two corner marks, subtitles, eight marks and audio verified
+PASS catalog: 4 checks; actual YoutubeDLRequest and Python bootstrap return 1752 complete rules with broken status

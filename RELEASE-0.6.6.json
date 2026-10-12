@@ -1,0 +1,14 @@
+{
+  "versionName": "0.6.6",
+  "versionCode": 12,
+  "apkBytes": 56309050,
+  "apkSha256": "624ed136e0edfbf49113c291581695ee6694e4a23eb70212adb0d2bfda122ae7",
+  "galleryVersion": "1.32.16",
+  "galleryRules": 973,
+  "videoAudioRules": 1752,
+  "galleryBundleSha256": "d43f22bd877185ce93720efa6890da719537a535d8b17fc6b683d03f3ab6cd1e",
+  "checks": 298,
+  "packagedGalleryIntegration": "passed",
+  "androidDeviceTest": false,
+  "signingCertificateSha256": "7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb"
+}

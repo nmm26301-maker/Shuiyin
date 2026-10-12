@@ -1,0 +1,12 @@
+{
+  "source": "https://commons.wikimedia.org/wiki/File:Example.jpg",
+  "count": 4,
+  "mime": "image/jpeg",
+  "bytes": 9022,
+  "format": "JPEG",
+  "size": [
+    172,
+    178
+  ],
+  "sha256": "99bd915a3819b1fee3722328ae904dde5459e9b15d56abd98b903c770a2f582c"
+}
