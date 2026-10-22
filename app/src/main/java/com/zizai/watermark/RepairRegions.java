@@ -24,8 +24,10 @@ final class RepairRegions {
             for(int i=0;i<parts.length;i++)regions[i]=RepairTemplate.decode(parts[i]);return validate(regions);
         }catch(Exception e){return null;}
     }
-    static float[][] suggestions(boolean xhsVideo){
+    static float[][] suggestions(boolean xhsVideo){return suggestions(xhsVideo,false);}
+    static float[][] suggestions(boolean xhs,boolean photo){
         // User-confirmed suggestion, not automatic watermark detection.
-        return xhsVideo?new float[][]{{.018f,.94f,.25f,.995f},{.845f,.94f,.988f,.995f}}:null;
+        if(xhs&&photo)return new float[][]{{.60f,.86f,.995f,.995f}};
+        return xhs?new float[][]{{.018f,.94f,.25f,.995f},{.845f,.94f,.988f,.995f}}:null;
     }
 }

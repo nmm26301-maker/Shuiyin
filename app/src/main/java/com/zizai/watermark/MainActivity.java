@@ -244,9 +244,9 @@ public class MainActivity extends Activity {
         content.addView(categories,lp(-1,32));
         LinearLayout main=vertical();pad(main,16,21,16,22);
         main.setBackground(round(PANEL,19));
-        TextView intro=text("粘贴分享链接，提取视频、图片和文案",17,WHITE,true);
+        TextView intro=text("贴一次分享链接，四路同时搜索素材",17,WHITE,true);
         main.addView(intro,lp(-1,39));
-        main.addView(text("不限保存次数 · 视频与音频下载",12,MUTED,false),lp(-1,26));
+        main.addView(text("同时交给原解析及三个网站搜索 · 统一保存",12,MUTED,false),lp(-1,26));
         gap(main,12);
         LinearLayout entry=horizontal();entry.setBackground(round(WHITE,32));
         linkInput=new EditText(this);
@@ -261,7 +261,7 @@ public class MainActivity extends Activity {
         linkInput.setText(incomingLink);
         incomingLink=LinkExtractor.extractLink(incomingLink);
         gap(main,19);
-        Button parse=button("→  解析链接",0xFF8F61DF);
+        Button parse=button("→  四路搜索素材",0xFF8F61DF);
         main.addView(parse,lp(-1,54));
         parse.setOnClickListener(v->parseSharedLink(linkInput.getText().toString()));
         content.addView(main,lp(-1,-2));gap(content,10);
@@ -288,35 +288,41 @@ public class MainActivity extends Activity {
             }
         }
         gap(content,16);
-        content.addView(text("平台解析与网页提取自动衔接。部分平台需本人 Cookie 或专用解析服务；封面会标注，文案来自标题与描述。",12,MUTED,false),lp(-1,-2));
+        content.addView(text("原解析与 Cobalt、TikTokio、GreenVideo 同时搜索，合并结果后统一下载。网站验证、超时或不支持会单独显示；封面仍标注为封面。",12,MUTED,false),lp(-1,-2));
     }
     private void parseSharedLink(String input) {parseSharedLink(input,false);}
     private void parseSharedLink(String input,boolean images) {
         if(busy)return;String url=LinkExtractor.extractLink(input);
         if(url.isEmpty()) {toast("请输入有效的 HTTPS 链接");return;}
         extracted=null;incomingLink=url;
-        startBusy("正在识别分享链接…");
+        startBusy("四路同时搜索素材…");
         runJob(()->{
             try {
-                String endpoint=getSharedPreferences("link_settings",0).getString("endpoint","");
-                LinkExtractor.Result r;
-                if(!endpoint.isEmpty()&&!images){
-                    try{updateProgress("通过平台解析服务识别素材…");r=LinkExtractor.parsePlatform(url,endpoint);}
-                    catch(Exception engineError){if(cancelled())throw engineError;updateProgress("尝试手机内置解析引擎…");r=parseLocalLink(url);}
-                }else r=parseLocalLink(url,images);
+                LinkExtractor.Result r=parseCombinedLink(url,images);
                 LinkExtractor.Result parsed=r;
                 mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();if(cancelled()){toast("已取消解析");return;}extracted=parsed;saveLinkRecord(url,parsed.title);showLinkExtract();});
             }catch(Exception error){mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();showLinkExtract();if(!cancelled())new AlertDialog.Builder(this).setTitle("尚未提取到素材").setMessage(ExtractionErrors.message(error)).setPositiveButton("网页辅助",(d,w)->showWebAssist(url)).setNeutralButton("更多下载入口",(d,w)->showDownloadSites()).setNegativeButton("返回",null).show();});}
         });
     }
+    private LinkExtractor.Result parseCombinedLink(String url,boolean images)throws Exception {
+        LinkExtractor.ensurePublic(url);JobControl.check();
+        String endpoint=getSharedPreferences("link_settings",0).getString("endpoint","");
+        java.util.List<ParallelSearch.Source> sources=new java.util.ArrayList<>();
+        sources.add(new ParallelSearch.Source("原解析",()->{
+            if(!endpoint.isEmpty())try{return LinkExtractor.parsePlatform(url,endpoint);}catch(Exception error){JobControl.check();}
+            return parseLocalLink(url,images);
+        }));
+        for(int i=0;i<DownloadSites.ALL.size();i++){final int index=i;sources.add(new ParallelSearch.Source(DownloadSites.ALL.get(i).name,()->WebsiteSearch.parse(this,index,url)));}
+        return ParallelSearch.run(url,sources,JobControl.flag(),45000,this::updateProgress);
+    }
     private LinkExtractor.Result parseLocalLink(String url)throws Exception {return parseLocalLink(url,false);}
     private LinkExtractor.Result parseLocalLink(String url,boolean images)throws Exception {
-        if(XhsParser.matches(url)){updateProgress("正在解析小红书短链接与笔记素材…");return LinkExtractor.parseXhs(this,url);}
         if(PlatformRoutes.shortLink(url)){
             updateProgress("正在展开 "+PlatformRoutes.name(url)+" 分享链接…");
             try{url=LinkExtractor.resolveShare(this,url);}catch(Exception error){JobControl.check();updateProgress("短链接展开暂未成功，继续尝试平台引擎…");}
         }
-        if(XhsParser.matches(url))return LinkExtractor.parseXhs(this,url);
+        if(DouyinParser.matches(url)&&!PlatformRoutes.shortLink(url))try{return LinkExtractor.parseDouyin(this,url);}catch(Exception error){JobControl.check();}
+        if(XhsParser.matches(url))try{updateProgress("正在解析小红书原图与视频…");return LinkExtractor.parseXhs(this,url);}catch(Exception error){JobControl.check();}
         boolean triedGallery=images||GalleryRoutes.prefer(url);Exception galleryError=null;
         if(triedGallery)try{return GalleryEngine.parse(this,url,this::updateProgress);}catch(Exception e){JobControl.check();galleryError=e;}
         try{
@@ -394,7 +400,7 @@ public class MainActivity extends Activity {
                     if(cancelled()){stop=true;break;}String prefix="链接 "+(index+1)+" / "+queue.entries.size()+" · ";
                     try{
                         entry.state=LinkSaveQueue.State.RESOLVING;entry.error="";LinkQueueStore.save(this,queue);updateProgress(prefix+"重新获取素材地址");
-                        LinkExtractor.Result result=parseLocalLink(entry.url,entry.mode==LinkSaveQueue.Mode.IMAGES);entry.title=result.title;
+                        LinkExtractor.Result result=parseCombinedLink(entry.url,entry.mode==LinkSaveQueue.Mode.IMAGES);entry.title=result.title;
                         java.util.List<LinkExtractor.Item> items=LinkSaveQueue.choose(result,entry.mode);
                         if(items.isEmpty())throw new java.io.IOException(entry.mode==LinkSaveQueue.Mode.IMAGES?"没有提取到图集原图，封面不会当作图集保存":"没有提取到所选类型的素材");
                         entry.state=LinkSaveQueue.State.SAVING;LinkQueueStore.save(this,queue);int errors=0;String lastError="";
@@ -533,7 +539,7 @@ public class MainActivity extends Activity {
             LinearLayout box=vertical();pad(box,14,10,14,10);box.setBackgroundColor(PANEL);
             box.addView(text("最多框选 8 处水印，一起修复。只框平台标识、博主头像与名字，保留中间字幕。成功后记住这组位置。",13,MUTED,false),lp(-1,-2));gap(box,8);
             VideoRegionView selection=new VideoRegionView(this,preview);selection.setRegions(suggestions);box.addView(selection,lp(-1,300));regionControls(box,selection);
-            if(suggestions!=null)box.addView(text("已预选左下博主标识、右下平台标识，请核对并调整框的位置。",12,0xFF5EEBE1,false),lp(-1,-2));
+            if(suggestions!=null)box.addView(text(suggestions.length==1?"已预选图片右下水印区域；若原图已无水印，请点跳过修复。有水印时核对并调整选区。":"已预选左下博主标识、右下平台标识，请核对并调整框的位置。",12,0xFF5EEBE1,false),lp(-1,-2));
             box.addView(text("固定区域修复可能留下模糊痕迹；水印位置改变时请清除记忆后重新框选。",12,MUTED,false),lp(-1,-2));
             ScrollView selectionScroll=new ScrollView(this);selectionScroll.addView(box);
             AlertDialog dialog=new AlertDialog.Builder(this).setTitle("保存前多区域去水印").setView(selectionScroll).setCancelable(false)
@@ -912,8 +918,8 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.7")
-        .setMessage("照片与视频在本机处理。链接提取会访问原网站；使用下载网站入口时，填入并提交的链接会交给选定网站解析。配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.8")
+        .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
     private void showFiles(){

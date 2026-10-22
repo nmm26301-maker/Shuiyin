@@ -18,7 +18,7 @@ final class DownloadRepair {
             JobControl.check();String key=RepairTemplate.key(item,image.getWidth(),image.getHeight());
             android.content.SharedPreferences settings=context.getSharedPreferences("download_repair",0);
             float[][] boxes=RepairRegions.decode(settings.getString("multi2|"+key,""));boolean remember=false;
-            if(boxes==null){boolean xhs=item.kind==LinkExtractor.Kind.VIDEO&&(XhsParser.matches(item.referer)||XhsParser.matches(item.url));boxes=choice.select(image,RepairRegions.suggestions(xhs));remember=boxes!=null;}
+            if(boxes==null){boolean xhs=XhsParser.matches(item.source)||XhsParser.matches(item.referer)||XhsParser.matches(item.url);boxes=choice.select(image,RepairRegions.suggestions(xhs,item.kind==LinkExtractor.Kind.IMAGE));remember=boxes!=null;}
             JobControl.check();if(boxes==null)return pending;boxes=RepairRegions.validate(boxes);
             Uri output;
             if(item.kind==LinkExtractor.Kind.VIDEO){output=LocalVideoProcessor.exportRegions(context,pending,1,true,boxes,status==null?null:status::update);}

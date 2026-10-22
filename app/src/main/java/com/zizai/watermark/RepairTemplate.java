@@ -7,8 +7,9 @@ import java.util.Locale;
 /** Normalized, explicitly chosen repair boxes; never guesses a watermark location. */
 final class RepairTemplate {
     static String key(LinkExtractor.Item item,int width,int height) {
-        String platform=PlatformRoutes.name(item.referer.isEmpty()?item.url:item.referer);
-        if(platform.equals("网页"))try{platform=new URI(item.referer.isEmpty()?item.url:item.referer).getHost();}catch(Exception ignored){}
+        String origin=item.source.isEmpty()?(item.referer.isEmpty()?item.url:item.referer):item.source;
+        String platform=PlatformRoutes.name(origin);
+        if(platform.equals("网页"))try{platform=new URI(origin).getHost();}catch(Exception ignored){}
         return platform+"|"+item.kind+"|"+Math.round(width*100.0/Math.max(1,height));
     }
     static float[] validate(float[] r)throws IOException {

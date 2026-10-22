@@ -46,13 +46,17 @@ public final class LinkExtractor {
         public final String url;
         public final String label;
         public final String referer;
+        public final String source;
+        public final String fallbackUrl;
         public final String userAgent;
         public final boolean engine;
         public final int engineIndex;
         public Item(Kind kind,String url,String label) {this(kind,url,label,"");}
         public Item(Kind kind,String url,String label,String referer) { this(kind,url,label,referer,false,0); }
         Item(Kind kind,String url,String label,String referer,boolean engine,int index){this(kind,url,label,referer,engine,index,"");}
-        Item(Kind kind,String url,String label,String referer,boolean engine,int index,String agent){this.kind=kind;this.url=url;this.label=label;this.referer=referer;this.engine=engine;this.engineIndex=index;this.userAgent=agent!=null&&agent.length()<768&&agent.indexOf('\r')<0&&agent.indexOf('\n')<0?agent:"";}
+        Item(Kind kind,String url,String label,String referer,boolean engine,int index,String agent){this(kind,url,label,referer,engine,index,agent,referer);}
+        Item(Kind kind,String url,String label,String referer,boolean engine,int index,String agent,String source){this(kind,url,label,referer,engine,index,agent,source,"");}
+        Item(Kind kind,String url,String label,String referer,boolean engine,int index,String agent,String source,String fallback){this.fallbackUrl=fallback==null?"":fallback;this.source=source==null?"":source;this.kind=kind;this.url=url;this.label=label;this.referer=referer;this.engine=engine;this.engineIndex=index;this.userAgent=agent!=null&&agent.length()<768&&agent.indexOf('\r')<0&&agent.indexOf('\n')<0?agent:"";}
     }
     public static class Result {
         public String title="网页素材";
@@ -147,6 +151,25 @@ public final class LinkExtractor {
             for(Item item:candidates.items)if(item.kind==Kind.IMAGE)result.addItem(item);
             return result;
         }finally{c.disconnect();}
+    }
+    static Result parseDouyin(Context context,String input)throws Exception {
+        java.io.File cookies=new java.io.File(context.getFilesDir(),"link-cookies.txt");
+        String source=input;if(DouyinParser.id(source).isEmpty())source=resolveShare(context,input);
+        String mobile=DouyinParser.sharePage(source);if(mobile.isEmpty())throw new IOException("抖音短链接未展开到作品页面");
+        HttpURLConnection connection=open(mobile,"",cookies);
+        try{
+            Result candidates=DouyinParser.parseHtml(new String(limitedRead(connection.getInputStream(),HTML_LIMIT),StandardCharsets.UTF_8),source),result=new Result();result.source=source;result.title=candidates.title;result.description=candidates.description;
+            if(candidates.count(Kind.VIDEO)==0)return candidates;
+            Exception last=null;int attempts=0;
+            for(Item item:candidates.items){if(item.kind!=Kind.VIDEO||attempts++>=3)continue;JobControl.check();HttpURLConnection probe=null;
+                try{probe=open(item.url,mobile,cookies,"bytes=0-31");byte[] bytes=new byte[32];int n=0;
+                    try(InputStream in=probe.getInputStream()){while(n<bytes.length){int count=in.read(bytes,n,bytes.length-n);if(count<0)break;n+=count;}}
+                    if(!MediaSignature.accepts("video/mp4",bytes,n))throw new IOException("抖音候选未返回视频文件");
+                    result.addItem(new Item(Kind.VIDEO,probe.getURL().toExternalForm(),item.label,mobile,false,0,"",source));return result;
+                }catch(Exception error){JobControl.check();last=error;}finally{if(probe!=null)probe.disconnect();}
+            }throw new IOException("抖音分享页已解析，但媒体地址无法下载",last);
+        }
+        finally{connection.disconnect();}
     }
     /** Optional self-hosted platform engine. Links are sent only to the configured endpoint. */
     public static Result parsePlatform(String share,String endpoint)throws Exception {
@@ -341,7 +364,11 @@ public final class LinkExtractor {
     public static Uri download(Context ctx,Item item) throws Exception {return download(ctx,item,null);}
     public static Uri download(Context ctx,Item item,Progress progress) throws Exception {return download(ctx,item,progress,true);}
     static Uri download(Context ctx,Item item,Progress progress,boolean publish) throws Exception {
-        return downloadOnce(ctx,item,progress,publish);
+        try{return downloadOnce(ctx,item,progress,publish);}catch(Exception error){
+            JobControl.check();if(item.kind!=Kind.IMAGE||!XhsParser.matches(item.source)||item.fallbackUrl.isEmpty()||item.fallbackUrl.equals(item.url))throw error;
+            if(progress!=null)progress.phase("原图地址不可用，回退笔记图片并继续去水印");
+            return downloadOnce(ctx,new Item(item.kind,item.fallbackUrl,item.label,item.referer,false,0,item.userAgent,item.source),progress,publish);
+        }
     }
     static boolean segmented(String url){try{String path=new URI(url).getPath().toLowerCase(Locale.ROOT);return path.endsWith(".m3u8")||path.endsWith(".mpd");}catch(Exception error){return false;}}
     private static Uri downloadOnce(Context ctx,Item item,Progress progress,boolean publish) throws Exception {

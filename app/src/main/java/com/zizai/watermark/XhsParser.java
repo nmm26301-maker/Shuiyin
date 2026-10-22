@@ -72,9 +72,9 @@ final class XhsParser {
             JSONArray backup=entry.optJSONArray("backupUrls");if(backup==null)backup=entry.optJSONArray("backup_urls");if(backup!=null)for(int i=0;i<Math.min(2,backup.length());i++)r.add(LinkExtractor.Kind.VIDEO,mediaUrl(backup.optString(i,"")),label+" · 备用线路");
         }
         JSONArray images=note.optJSONArray("imageList");if(images!=null)for(int i=0;i<Math.min(24,images.length());i++){
-            JSONObject image=images.optJSONObject(i);if(image==null)continue;String url=image.optString("urlDefault",image.optString("url",""));
-            if(url.isEmpty()){JSONArray info=image.optJSONArray("infoList");if(info!=null)for(int j=0;j<info.length();j++){JSONObject item=info.optJSONObject(j);if(item!=null&&url.isEmpty())url=item.optString("url","");}}
-            r.add(LinkExtractor.Kind.IMAGE,mediaUrl(url),"video".equals(note.optString("type"))?"视频封面":"笔记图片 "+(i+1));
+            JSONObject image=images.optJSONObject(i);if(image==null)continue;
+            String url=XhsImages.primary(image),fallback=XhsImages.fallback(image);
+            r.addItem(new LinkExtractor.Item(LinkExtractor.Kind.IMAGE,url,"video".equals(note.optString("type"))?"视频封面":"笔记图片 "+(i+1)+" · 优先原图",source,false,0,"",source,url.equals(fallback)?"":fallback));
         }
         if(r.items.isEmpty())throw new IOException("笔记页面没有返回可下载的素材，请用网页辅助打开后重试");
         return r;
