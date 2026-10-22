@@ -1,8 +1,16 @@
-# 水印工坊 0.6.6 · Android
+# 水印工坊 0.6.7 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 12。沿用原工程签名，可以覆盖安装 0.6.5。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 13。沿用原工程签名，可以覆盖安装 0.6.6。
 
-## 本次扩展
+## 本次更新 0.6.7
+
+- “链接提取 → 下载入口”新增 Cobalt（cobalt.tools）、TikTokio（tiktokio.bio）、GreenVideo（greenvideo.cc）。现有国内外平台搜索和全部规则搜索也可搜索站名、域名及推特、抖音、TikTok、小红书、B 站关键词。
+- 输入分享链接后可标出对应入口；进入网站点“填入分享链接”，再自行点击网站的解析按钮。只填入当前选定网站，不自动提交或覆盖自建 JSON 接口设置。
+- 网站触发的 HTTPS 视频、音频和图片下载可进入现有保存、去水印、进度和媒体库流程，保存前确认。保留下载地址签名查询、Referer 和 User-Agent；HTML、脚本、APK 等不进入媒体保存。
+- 如果网站使用 blob 下载、验证或页面不兼容，可点“外部浏览器”，同时复制源分享链接；这类下载不承诺应用内捕获。三个入口属于网站辅助，并非三个已验证的自动解析 API。抖音经 TikTokio、B 站经 GreenVideo 的实际支持尚待验证，界面已注明。
+- 新增 35 项下载路由和真实表单脚本检查通过；全部 Java 源码编译、现有回归通过。未连接 Android 设备，三站实际视频解析、WebView 下载回调和手机保存仍需实测。
+
+## 0.6.6 图集扩展
 
 - 内置 gallery-dl 1.32.16 图集引擎及纯 Python 依赖，与 yt-dlp 视频／音频引擎并行使用。Instagram 作品、Pinterest、Pixiv、DeviantArt、Flickr、Imgur 等由上游图集解析器提取图片及混合媒体；登录内容可能需要本人有效 Cookie。
 - 图集引擎 973 条上游规则、视频／音频引擎 1,752 条规则均可搜索、分页查看。规则不是独立平台数量，也不表示每条规则都能成功下载。49 个常用平台入口沿用前版。
@@ -33,7 +41,7 @@
 
 ## 引擎与服务
 
-菜单可更新 yt-dlp 并同步其目录，导入／清除本人 Netscape cookies.txt，设置可选 HTTPS 解析接口。图集引擎随安装包更新。默认所有解析在本机进行，没有内置公用解析服务或密钥。
+菜单可更新 yt-dlp 并同步其目录，导入／清除本人 Netscape cookies.txt，设置可选 HTTPS 解析接口。图集引擎随安装包更新。默认解析在本机进行。另有三个可选网站辅助入口，需手动进入并提交链接；没有内置公用自动解析 API 或密钥。
 
 可选服务协议：HTTPS POST `{"url":"https://分享链接"}`，返回 `{"title":"标题","description":"文案","source":"https://原页面","items":[{"kind":"video","url":"https://媒体直链","label":"视频"}]}`；kind 为 video/image/audio，失败返回 error。队列使用本机解析器；专用远程接口目前用于单链接解析。网页辅助可提取页面媒体标签、动态 currentSrc、公开播放清单与同源资源，blob、跨域框架内部和 DRM 不转换成可下载链接。
 
@@ -72,7 +80,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.6.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.7.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

@@ -8,7 +8,7 @@ p.add_argument('--live-xhs',help='Optional real XHS share URL; requires public D
 a=p.parse_args();root=pathlib.Path(__file__).resolve().parents[1]
 out=root/'build-offline/test-classes';out.mkdir(exist_ok=True)
 cp=os.pathsep.join(map(str,[out,pathlib.Path(a.json).resolve(),root/'build-offline/classes',root/'build-offline/android-api.jar']+list(pathlib.Path(a.deps).resolve().glob('*.jar'))))
-subprocess.run(['java','-jar',str(pathlib.Path(a.ecj).resolve()),'-17','-encoding','UTF-8','-warn:none','-classpath',cp,'-d',str(out)]+[str(root/'tests'/name) for name in ['LinkTests.java','EngineTests.java','XhsTests.java','TransferTests.java','SaveWorkflowTests.java','MultiRegionTests.java','CatalogTests.java','GalleryQueueTests.java']],check=True)
+subprocess.run(['java','-jar',str(pathlib.Path(a.ecj).resolve()),'-17','-encoding','UTF-8','-warn:none','-classpath',cp,'-d',str(out)]+[str(root/'tests'/name) for name in ['LinkTests.java','EngineTests.java','XhsTests.java','TransferTests.java','SaveWorkflowTests.java','MultiRegionTests.java','CatalogTests.java','GalleryQueueTests.java','DownloadSiteTests.java']],check=True)
 tests=[('LinkTests',[str(pathlib.Path(a.sample_video).resolve())]),('EngineTests',[str(root/'tests/fixtures/engine-generic.json')]),('XhsTests',[str(root/'tests/fixtures/xhs-mobile.html')])]
 if a.live_xhs:tests[-1][1].extend([a.live_xhs,str(root/'build-offline/live-selected-url.txt')])
 for name,args in tests:subprocess.run(['java','-cp',cp,'com.zizai.watermark.'+name]+args,check=True)
@@ -26,3 +26,6 @@ subprocess.run(['java','-cp',cp,'com.zizai.watermark.CatalogTests',str(root/'app
 
 subprocess.run(['python3',str(root/'tests/test-gallery.py')],check=True)
 subprocess.run(['java','-cp',cp,'com.zizai.watermark.GalleryQueueTests',str(root/'build-offline/gallery-fixture.jsonl')],check=True)
+
+subprocess.run(['java','-cp',cp,'com.zizai.watermark.DownloadSiteTests',str(root/'build-offline/download-site-form.js')],check=True)
+subprocess.run(['node',str(root/'tests/download-site-form-tests.js'),str(root/'build-offline/download-site-form.js')],check=True)
