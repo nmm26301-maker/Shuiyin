@@ -15,9 +15,11 @@ function fixture(host='tiktokio.bio'){
   const context=vm.createContext({window,document,HTMLInputElement,HTMLAnchorElement,Event,location:{href:'https://'+host+'/',hostname:host},URL,Date,Set,setTimeout:f=>f(),DOMParser:class{parseFromString(){return {querySelectorAll:()=>[]};}}});
   const poll=()=>JSON.parse(vm.runInContext(template.replace('/*CONFIG*/',JSON.stringify(config)),context));
   async function response(data){state.response=data;await window.fetch('/parse');await new Promise(resolve=>setImmediate(resolve));return poll();}
-  return {state,config,poll,response,context,HTMLAnchorElement};
+  return {state,config,poll,response,context,HTMLAnchorElement,button};
 }
 (async()=>{
+  let blocked=fixture();blocked.button.disabled=true;blocked.poll();check(blocked.state.value===blocked.config.source&&blocked.state.submitted===0,'fill URL even when submit initially disabled');
+  blocked.button.disabled=false;blocked.poll();check(blocked.state.submitted===1&&blocked.state.fields.length===2,'submit once after framework enables button without repeated input events');
   let f=fixture();f.poll();check(f.state.submitted===1,'one submission on initial poll');check(f.state.value===f.config.source,'share link and signature filled once');
   check(f.state.fields.join(',')==='input,change','framework form events dispatched');f.poll();check(f.state.submitted===1,'polling never resubmits');
   let r=await f.response({success:true,links:{'Video (No Watermark)':'https://cdn.example.org/media?sig=a%2Fb','Video (Watermark)':'https://cdn.example.org/marked.mp4','MP3':'https://cdn.example.org/audio?id=1'}});

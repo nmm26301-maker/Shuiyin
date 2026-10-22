@@ -1,6 +1,6 @@
 (function(config){
   if(window.__wmSearchPoll)return window.__wmSearchPoll();
-  var media=[],submitted=false,error='',started=Date.now(),baseline=new Set();
+  var media=[],submitted=false,filledInput=null,error='',started=Date.now(),baseline=new Set();
   function kind(url,label){
     var s=String(label||'').toLowerCase();try{var p=new URL(url,location.href).pathname.toLowerCase();
       if(/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/.test(p)||/mp3|audio|音频/.test(s))return 'AUDIO';
@@ -77,11 +77,15 @@
   window.__wmSearchPoll=function(){
     if(!submitted){
       var input=document.querySelector(config.input),button=document.querySelector(config.button);
-      if(input&&button&&!input.disabled&&!button.disabled){
-        document.querySelectorAll('a[href]').forEach(a=>baseline.add(a.href));document.querySelectorAll('video,audio').forEach(v=>{if(v.src)baseline.add(v.src);if(v.currentSrc)baseline.add(v.currentSrc);});
-        var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,config.source);
-        input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));
-        submitted=true;setTimeout(()=>button.click(),100);
+      if(input&&button&&!input.disabled){
+        if(filledInput!==input){
+          var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,config.source);
+          input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));filledInput=input;
+        }
+        if(!button.disabled){
+          document.querySelectorAll('a[href]').forEach(a=>baseline.add(a.href));document.querySelectorAll('video,audio').forEach(v=>{if(v.src)baseline.add(v.src);if(v.currentSrc)baseline.add(v.currentSrc);});
+          submitted=true;setTimeout(()=>{if(!button.disabled)button.click();else submitted=false;},100);
+        }
       }
     }else{
       links(document);greenResult();document.querySelectorAll('#target video,#target audio,.result video,.result audio').forEach(v=>{var type=v.tagName==='AUDIO'?'AUDIO':'VIDEO';add(v.currentSrc,type,'网站播放素材');add(v.src,type,'网站播放素材');});
