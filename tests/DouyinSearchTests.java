@@ -50,9 +50,20 @@ public final class DouyinSearchTests {
         check(video.url.endsWith("a%2Fb"),"signed playback query not rewritten");
         JSONObject active=new JSONObject().put("media",new JSONArray().put(new JSONObject().put("kind","VIDEO").put("url",url).put("active",true)).put(new JSONObject().put("kind","VIDEO").put("url","https://cdn.example.org/prefetched.mp4")));
         result=DouyinBrowserMedia.parse(active,page,page,"UA");check(result.items.size()==1&&result.items.get(0).url.equals(url),"current video accepted; unrelated prefetch cannot win automatic race");
+        active.put("page",page).put("douyin",new JSONObject().put("aweme_detail",new JSONObject().put("aweme_id",DouyinParser.id(page)).put("video",new JSONObject())).toString());
+        check(DouyinBrowserMedia.parse(active,page,page,"UA").count(LinkExtractor.Kind.VIDEO)==1,"incomplete SSR must not discard an available normal player URL");
+        active.put("douyin","malformed state");check(DouyinBrowserMedia.parse(active,page,page,"UA").count(LinkExtractor.Kind.VIDEO)==1,"malformed SSR can fall back to current player");
+        active.put("page",page.replace("4567","4568"));check(DouyinBrowserMedia.parse(active,page,page,"UA").items.isEmpty(),"SPA navigation snapshot rejected even if native page callback is stale");
+        active.put("page","https://unrelated.example.org/video/7312345678901234567");check(DouyinBrowserMedia.parse(active,page,page,"UA").items.isEmpty(),"snapshot page host checked");
+        active.put("page",page+"?normal=1").remove("douyin");check(DouyinBrowserMedia.parse(active,page,page,"UA").items.get(0).referer.equals(page+"?normal=1"),"same-work current snapshot supplies downloader referer");
         check(DouyinBrowserMedia.parse(snapshot,page,page.replace("4567","4568"),"UA").items.isEmpty(),"other work snapshot rejected");
         item.getJSONObject("video").put("is_drm",1);snapshot.put("douyin",new JSONObject().put("aweme_detail",item).toString());
         try{DouyinBrowserMedia.parse(snapshot,page,page,"UA");throw new AssertionError("DRM");}catch(IOException expected){checks++;}
+        snapshot.put("media",active.getJSONArray("media"));
+        try{DouyinBrowserMedia.parse(snapshot,page,page,"UA");throw new AssertionError("DRM fallback");}catch(DouyinParser.Restricted expected){check(true,"DRM is not treated as missing SSR");}
+        item.getJSONObject("video").remove("is_drm");item.put("is_private",1);snapshot.put("douyin",new JSONObject().put("aweme_detail",item).toString());
+        try{DouyinBrowserMedia.parse(snapshot,page,page,"UA");throw new AssertionError("private fallback");}catch(DouyinParser.Restricted expected){check(true,"numeric private flag cannot enter player fallback");}
+        try{DouyinParser.parseHtml("window._ROUTER_DATA="+snapshot.getString("douyin")+";<script id='RENDER_DATA'>"+state+"</script>",page);throw new AssertionError("private render fallback");}catch(DouyinParser.Restricted expected){check(true,"restricted router state cannot fall through to an alternate render block");}
         snapshot=new JSONObject().put("media",new JSONArray().put(new JSONObject().put("kind","VIDEO").put("url","blob:"+page)).put(new JSONObject().put("kind","IMAGE").put("url","https://cdn.example.org/ad.jpg")));
         check(DouyinBrowserMedia.parse(snapshot,page,page,"UA").items.isEmpty(),"blob and unrelated images not downloadable playback");
         System.out.println("PASS Douyin search: "+checks+" checks");

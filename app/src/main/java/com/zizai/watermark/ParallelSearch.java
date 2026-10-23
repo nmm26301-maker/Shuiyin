@@ -47,7 +47,7 @@ final class ParallelSearch {
                 if(combined.description.isEmpty())combined.description=result.description;
             }
             states.replaceAll((name,state)->state.equals("搜索中")?"搜索超时":state);combined.notice=summary(states);
-            if(combined.items.isEmpty())throw new IOException("四路搜索未取得素材：\n"+combined.notice);
+            if(combined.items.isEmpty())throw new SearchFailure("四路搜索未取得素材",states);
             return combined;
         }finally{
             for(AtomicBoolean flag:flags)flag.set(true);for(Future<?> job:jobs)job.cancel(true);pool.shutdownNow();

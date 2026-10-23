@@ -7,8 +7,15 @@ final class DouyinBrowserMedia {
     static LinkExtractor.Result parse(JSONObject object,String source,String page,String agent)throws Exception {
         LinkExtractor.Result result=new LinkExtractor.Result();result.source=source;result.title="抖音网页素材";
         if(!PlaybackRequests.onWorkPage(source,page))return result;
+        String actual=object.optString("page","");
+        if(!actual.isEmpty()){
+            if(!PlaybackRequests.onWorkPage(source,actual)||!PlaybackRequests.onWorkPage(page,actual))return result;
+            page=actual;
+        }
         String state=object.optString("douyin","");
-        if(!state.isEmpty())result=DouyinParser.parseState(new JSONObject(state),page);
+        if(!state.isEmpty())try{result=DouyinParser.parseState(new JSONObject(state),page);}
+        catch(DouyinParser.Restricted denied){throw denied;}
+        catch(Exception unavailable){/* A normal player can have media before usable SSR state. */}
         result.source=source;
         JSONArray playing=object.optJSONArray("media");
         if(playing!=null)for(int i=0;i<Math.min(48,playing.length());i++){

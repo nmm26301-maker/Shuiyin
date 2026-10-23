@@ -7,6 +7,9 @@ public final class PlaybackRequestTests {
     static void check(boolean v,String why){checks++;if(!v)throw new AssertionError(why);}
     public static void main(String[] args)throws Exception {
         String share="https://www.douyin.com/video/7312345678901234567";
+        check(PlaybackRequests.adoptWork("https://v.douyin.com/short/",share).equals(share),"short share adopts first canonical work on navigation");
+        check(PlaybackRequests.adoptWork(share,share.replace("4567","4568")).equals(share),"later SPA navigation cannot retarget requested work");
+        check(PlaybackRequests.adoptWork("https://v.douyin.com/short/","https://unrelated.example.org/video/7312345678901234567").equals("https://v.douyin.com/short/"),"external navigation cannot become original work");
         check(PlaybackRequests.kind("https://v3-web.douyinvod.com/opaque?mime_type=video_mp4&sig=a%2Fb",share)==LinkExtractor.Kind.VIDEO,"extensionless playback query recognized");
         check(PlaybackRequests.kind("https://v3-web.douyinvod.com/video/tos/opaque?sig=a%2Fb",share)==LinkExtractor.Kind.VIDEO,"public CDN video path recognized");
         check(PlaybackRequests.kind("https://aweme.snssdk.com/aweme/v1/play/?video_id=abc",share)==LinkExtractor.Kind.VIDEO,"public play endpoint");

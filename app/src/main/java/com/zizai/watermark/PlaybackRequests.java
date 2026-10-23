@@ -5,6 +5,9 @@ import java.util.Locale;
 
 /** Public playback URLs, including extensionless Douyin CDN requests. No decryption. */
 final class PlaybackRequests {
+    static String adoptWork(String source,String page){
+        return DouyinParser.matches(source)&&DouyinParser.id(source).isEmpty()&&DouyinParser.matches(page)&&!DouyinParser.id(page).isEmpty()?page:source;
+    }
     static String header(java.util.Map<String,String> headers,String name,String fallback){
         if(headers!=null)for(java.util.Map.Entry<String,String> entry:headers.entrySet())if(entry.getKey()!=null&&entry.getKey().equalsIgnoreCase(name)){
             String value=entry.getValue();if(value!=null&&!value.contains("\r")&&!value.contains("\n"))return value;

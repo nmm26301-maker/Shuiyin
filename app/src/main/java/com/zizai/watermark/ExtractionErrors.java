@@ -2,6 +2,7 @@ package com.zizai.watermark;
 import java.util.Locale;
 final class ExtractionErrors {
     static String message(Throwable error){
+        if(error instanceof SearchFailure)return error.getMessage();
         String raw=error==null?"":String.valueOf(error.getMessage());String s=raw.toLowerCase(Locale.ROOT);
         if(s.contains("timed out")||s.contains("timeout")||s.contains("超时"))return "访问平台超时，尚未提取到素材。请重新解析，或用网页辅助打开链接后提取。";
         if(s.contains("cookies")||s.contains("login")||s.contains("sign in")||s.contains("登录"))return "平台需要有效的访问会话。请用网页辅助打开笔记，或在菜单导入本人导出的 cookies.txt 后重试。";

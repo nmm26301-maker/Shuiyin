@@ -42,7 +42,8 @@ final class DouyinWebSearch {
                 settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
                 settings.setMediaPlaybackRequiresUserGesture(true);CookieManager.getInstance().setAcceptThirdPartyCookies(view,false);
                 view.setWebViewClient(new WebViewClient(){
-                    @Override public void onPageStarted(WebView browser,String url,Bitmap icon){page=url;if(DouyinParser.id(workSource).isEmpty()&&DouyinParser.matches(url)&&!DouyinParser.id(url).isEmpty())workSource=url;}
+                    @Override public void onPageStarted(WebView browser,String url,Bitmap icon){visit(url);}
+                    @Override public void doUpdateVisitedHistory(WebView browser,String url,boolean reload){visit(url);if(!closed){ui.removeCallbacks(tick);poll();}}
                     @Override public boolean shouldOverrideUrlLoading(WebView browser,WebResourceRequest request){
                         String url=request.getUrl().toString();return !EngineMetadata.https(url)||(request.isForMainFrame()&&!DouyinParser.matches(url));
                     }
@@ -50,12 +51,13 @@ final class DouyinWebSearch {
                         try{LinkExtractor.ensurePublic(request.getUrl().toString());return null;
                         }catch(Exception e){return new WebResourceResponse("text/plain","UTF-8",new ByteArrayInputStream(new byte[0]));}
                     }
-                    @Override public void onPageFinished(WebView browser,String url){page=url;if(!closed){ui.removeCallbacks(tick);poll();}}
+                    @Override public void onPageFinished(WebView browser,String url){visit(url);if(!closed){ui.removeCallbacks(tick);poll();}}
                     @Override public void onReceivedError(WebView browser,WebResourceRequest request,WebResourceError error){if(request.isForMainFrame())close();}
                 });
                 String share=DouyinParser.sharePage(source);view.loadUrl(share.isEmpty()?source:share);
             }catch(RuntimeException e){close();}
         }
+        void visit(String url){workSource=PlaybackRequests.adoptWork(workSource,url);page=url;}
         void poll(){
             if(closed||view==null)return;String current=page;
             if(!PlaybackRequests.onWorkPage(workSource,current)){ui.postDelayed(tick,500);return;}
