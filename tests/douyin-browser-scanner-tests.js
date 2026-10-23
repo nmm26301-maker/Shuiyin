@@ -9,4 +9,13 @@ assert.ok(!result.media.some(v=>v.url.includes('evil.org')||v.url.includes('/acc
 assert.strictEqual(JSON.parse(result.douyin).item_list[0].aweme_id,id);checks++;
 assert.ok(!JSON.stringify(result).includes('not-to-export')&&!result.douyin.includes('unrelated'));checks++;
 ctx.location.pathname='/video/7312345678901234569';result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(result.douyin,'');checks++;
+ctx.location.pathname='/';ctx.location.search='?modal_id='+id+'&x=1';
+result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(JSON.parse(result.douyin).item_list[0].aweme_id,id);checks++;
+ctx.window._ROUTER_DATA={};const h264={aweme_id:id,desc:'render work',account:{token:'not-to-export'},video:{play_addr_h264:{url_list:[url]}}};
+ctx.document.getElementById=name=>name==='RENDER_DATA'?{textContent:encodeURIComponent(JSON.stringify({aweme_detail:h264}))}:null;
+result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(JSON.parse(result.douyin).item_list[0].video.play_addr_h264.url_list[0],url);checks++;
+assert.ok(!result.douyin.includes('not-to-export')&&!result.douyin.includes('account'));checks++;
+ctx.location.search='?aweme_id='+id;result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(JSON.parse(result.douyin).item_list[0].aweme_id,id);checks++;
+ctx.document.getElementById=()=>null;ctx.window._ROUTER_DATA={recommendations:[item]};
+result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(result.douyin,'');checks++;
 console.log('PASS Douyin browser scanner: '+checks+' checks (actual generated script, signed playback URL, selected-work state, no account export)');

@@ -44,10 +44,13 @@ final class PlatformEngine {
         return request;
     }
     static LinkExtractor.Result parse(Context context,String share,Status status)throws Exception {
+        return parse(context,share,status,150_000);
+    }
+    static LinkExtractor.Result parse(Context context,String share,Status status,long timeout)throws Exception {
         init(context,status);if(status!=null)status.update("正在识别平台素材…");
         YoutubeDLRequest request=request(context,share,0);
         request.addOption("--dump-single-json");request.addOption("--skip-download");
-        String json=execute(context,request,150_000,null,null,true,share);
+        String json=execute(context,request,timeout,null,null,true,share);
         JobControl.check();return EngineMetadata.parse(json,share);
     }
     private static String execute(Context context,YoutubeDLRequest request,long timeout,File cache,LinkExtractor.Progress progress,boolean metadata,String sessionUrl)throws Exception {

@@ -17,4 +17,6 @@ check(result.media.some(x=>x.url==='https://cdn.example.org/played.MP4?keep=a%2F
 check(result.media.some(x=>x.url.endsWith('audio.aac')&&x.kind==='AUDIO'),'resource audio type recognized');
 check(!JSON.stringify(result).includes('must not be exported')&&!result.media.some(x=>x.url.includes('settings.json')),'account state and unrelated API responses excluded');
 check(result.html.includes('<title>Current note</title>')&&JSON.parse(result.state).noteData.data.noteData.title==='the displayed note','title and displayed XHS note retained');
+check(result.media.find(x=>x.url==='https://cdn.example.org/play?id=7&token=a%2Fb').active===true,'DOM playback marked as current media');
+check(result.media.find(x=>x.url==='https://cdn.example.org/played.MP4?keep=a%2Fb').active===false,'resource prefetch not marked as current playback');
 console.log('PASS web scanner: '+checks+' checks; executed actual WebView script with DOM fixtures');

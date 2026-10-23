@@ -1,8 +1,15 @@
-# 水印工坊 0.6.9 · Android
+# 水印工坊 0.6.10 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 15。沿用原工程签名，可以覆盖安装 0.6.8。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 16。沿用原工程签名，可以覆盖安装 0.6.9。
 
-## 本次更新 0.6.9
+## 本次更新 0.6.10
+
+- 抖音原解析改为三条独立路径同时尝试：分享页 HTTP、限时 28 秒的平台引擎、正常加载的原作品 WebView；最先取得视频或图集即返回。原解析内部最多等待 37 秒，避免慢引擎耗尽外层 45 秒总时限；失败、取消会停止其他路径并清理网页。
+- 封面或空结果不算抖音视频 / 图集解析成功；全失败保留各路径原因。视频页为空时增加直接打开原作品播放提取按钮，仍使用原下载与保存流程。
+- 浏览器补齐 modal_id / aweme_id 作品编号与 RENDER_DATA 状态，分享页在 ROUTER_DATA 无作品时继续尝试 RENDER_DATA；支持已发布的 H264 播放地址。正常播放的请求保留 Referer、User-Agent 与签名查询。
+- **尚未完成抖音实链下载和 Android WebView 真机验证，不能宣称已经打通。** 本次是解析流程和覆盖范围修复；验证 / 登录仍需在正常网页完成。
+
+## 0.6.9 网站协议修正
 
 - 修正三站网页自动解析器的窗口生命周期：WebView 先挂载到真实 Activity 窗口，关闭时解除挂载并销毁；不再使用未挂载的网页对象充当已接通接口。页面自动化仍取决于站点兼容性，未连接 Android 设备验证。
 - TikTokio 使用当前网页实际提交的 multipart POST（page + ajax）直接解析 JSON，返回的完整媒体继续走原下载流程；接口拒绝、HTML 验证页和错误 JSON 会给出原因，随后尝试正常网页辅助。此次在线样例返回了“链接格式错误”，**未验证成功下载**。
@@ -93,7 +100,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.9.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.10.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

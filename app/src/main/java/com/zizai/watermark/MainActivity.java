@@ -315,6 +315,7 @@ public class MainActivity extends Activity {
         String endpoint=getSharedPreferences("link_settings",0).getString("endpoint","");
         java.util.List<ParallelSearch.Source> sources=new java.util.ArrayList<>();
         sources.add(new ParallelSearch.Source("原解析",()->{
+            if(DouyinParser.matches(url))return parseDouyinLink(url,endpoint);
             if(!endpoint.isEmpty())try{return LinkExtractor.parsePlatform(url,endpoint);}catch(Exception error){JobControl.check();}
             return parseLocalLink(url,images);
         }));
@@ -322,12 +323,25 @@ public class MainActivity extends Activity {
         return ParallelSearch.run(url,sources,JobControl.flag(),45000,this::updateProgress);
     }
     private LinkExtractor.Result parseLocalLink(String url)throws Exception {return parseLocalLink(url,false);}
+    private LinkExtractor.Result parseDouyinLink(String share,String endpoint)throws Exception {
+        updateProgress("正在同时尝试抖音分享页、平台引擎和原作品网页…");
+        java.util.List<ParallelSearch.Source> attempts=new java.util.ArrayList<>(java.util.Arrays.asList(
+            new ParallelSearch.Source("分享页",()->LinkExtractor.parseDouyin(this,share)),
+            new ParallelSearch.Source("平台引擎",()->{
+                String resolved=PlatformRoutes.shortLink(share)?LinkExtractor.resolveShare(this,share):share;
+                String id=DouyinParser.id(resolved);if(id.isEmpty())throw new java.io.IOException("短链接未返回抖音作品编号");
+                return PlatformEngine.parse(this,"https://www.douyin.com/video/"+id,this::updateProgress,28000);
+            }),
+            new ParallelSearch.Source("原作品网页",()->DouyinWebSearch.parse(this,share))));
+        if(!endpoint.isEmpty())attempts.add(new ParallelSearch.Source("专用接口",()->LinkExtractor.parsePlatform(share,endpoint)));
+        return MediaSearchRace.run(attempts,37000);
+    }
     private LinkExtractor.Result parseLocalLink(String url,boolean images)throws Exception {
+        if(DouyinParser.matches(url))return parseDouyinLink(url,"");
         if(PlatformRoutes.shortLink(url)){
             updateProgress("正在展开 "+PlatformRoutes.name(url)+" 分享链接…");
             try{url=LinkExtractor.resolveShare(this,url);}catch(Exception error){JobControl.check();updateProgress("短链接展开暂未成功，继续尝试平台引擎…");}
         }
-        if(DouyinParser.matches(url)&&!PlatformRoutes.shortLink(url))try{return LinkExtractor.parseDouyin(this,url);}catch(Exception error){JobControl.check();}
         if(XhsParser.matches(url))try{updateProgress("正在解析小红书原图与视频…");return LinkExtractor.parseXhs(this,url);}catch(Exception error){JobControl.check();}
         boolean triedGallery=images||GalleryRoutes.prefer(url);Exception galleryError=null;
         if(triedGallery)try{return GalleryEngine.parse(this,url,this::updateProgress);}catch(Exception e){JobControl.check();galleryError=e;}
@@ -520,6 +534,9 @@ public class MainActivity extends Activity {
         if(n==0) {
             TextView empty=text("未检测到可直接提取的"+(index==0?"视频":index==1?"图片":"音频")+"地址。\n可能是动态资源或网站限制；尝试原平台的授权保存方式。",13,MUTED,false);
             empty.setGravity(Gravity.CENTER);pad(empty,15,30,15,30);parent.addView(empty,lp(-1,-2));
+            if(index==0&&DouyinParser.matches(result.source)){
+                Button play=button("打开这条抖音作品 · 播放后提取",0xFF6650BA);parent.addView(play,lp(-1,48));play.setOnClickListener(v->showWebAssist(result.source));
+            }
         }
     }
     private static final class SavedLink {final Uri uri;final boolean repaired;SavedLink(Uri u,boolean r){uri=u;repaired=r;}}
@@ -924,7 +941,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.9")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.10")
         .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
@@ -1243,7 +1260,7 @@ public class MainActivity extends Activity {
             try{Object raw=new org.json.JSONTokener(value).nextValue();if(!(raw instanceof String)||((String)raw).length()>1_500_000)return;
                 org.json.JSONObject object=new org.json.JSONObject((String)raw);LinkExtractor.Result metadata;
                 if(downloads){metadata=new LinkExtractor.Result();metadata.source=page;String title=view.getTitle();if(title!=null)metadata.title=title;}
-                else if(DouyinParser.matches(page)&&!object.optString("douyin").isEmpty())metadata=DouyinParser.parseState(new org.json.JSONObject(object.optString("douyin")),page);
+                else if(DouyinParser.matches(page))metadata=DouyinBrowserMedia.parse(object,session.source,page,view.getSettings().getUserAgentString());
                 else if(XhsParser.matches(page)&&!object.optString("state").isEmpty()){
                     LinkExtractor.Result candidates=XhsParser.parseState(object.optString("state"),page);metadata=new LinkExtractor.Result();metadata.source=page;metadata.title=candidates.title;metadata.description=candidates.description;boolean video=false;
                     for(LinkExtractor.Item item:candidates.items){if(item.kind==LinkExtractor.Kind.IMAGE)metadata.addItem(item);else if(item.kind==LinkExtractor.Kind.VIDEO&&!video&&!item.label.contains("原始")){metadata.addItem(item);video=true;}}
