@@ -19,6 +19,10 @@ final class DouyinParser {
         if(assignment.find())state=new JSONObject(balanced(html,html.indexOf('{',assignment.end())));
         if(state==null){Matcher render=Pattern.compile("<script[^>]*id=[\"']RENDER_DATA[\"'][^>]*>(.*?)</script>",Pattern.DOTALL|Pattern.CASE_INSENSITIVE).matcher(html);if(render.find()){String data=render.group(1).trim();state=new JSONObject(data.startsWith("{")?data:URLDecoder.decode(data,StandardCharsets.UTF_8.name()));}}
         if(state==null)throw new IOException("抖音分享页未返回作品数据，可能要求登录或验证");
+        return parseState(state,source);
+    }
+    static LinkExtractor.Result parseState(JSONObject state,String source)throws Exception {
+        String requested=id(source);if(requested.isEmpty())throw new IOException("未识别这条抖音作品编号");
         JSONObject item=find(state,requested,0);if(item==null)throw new IOException("抖音页面没有返回这条作品，未提取其他推荐内容");
         if(item.optInt("is_prohibited",0)!=0||item.optBoolean("is_private",false))throw new IOException("这条抖音作品不可公开访问");
         LinkExtractor.Result result=new LinkExtractor.Result();result.source=source;result.title=item.optString("desc","抖音素材");result.description=item.optString("desc","");

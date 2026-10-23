@@ -40,6 +40,7 @@ final class PlatformEngine {
         if(index>0)request.addOption("--playlist-items",index);
         File cookies=new File(context.getFilesDir(),COOKIES);
         if(cookies.isFile())request.addOption("--cookies",cookies.getAbsolutePath());
+        else if(!WebSessionCookies.header(url).isEmpty()){String agent=WebSessionCookies.userAgent("");if(!agent.isEmpty())request.addOption("--user-agent",agent);}
         return request;
     }
     static LinkExtractor.Result parse(Context context,String share,Status status)throws Exception {

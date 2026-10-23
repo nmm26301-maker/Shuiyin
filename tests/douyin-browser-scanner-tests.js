@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync(process.argv[2],'utf8');let checks=0;
+const id='7312345678901234567',url='https://v3-web.douyinvod.com/opaque?mime_type=video_mp4&sig=a%2Fb';
+const item={aweme_id:id,desc:'selected work',video:{play_addr:{url_list:[url]}}};
+const ctx={document:{querySelectorAll:()=>[]},window:{_ROUTER_DATA:{loaderData:{'video_(id)/page':{videoInfoRes:{item_list:[{aweme_id:'7312345678901234568',desc:'unrelated'},item]}}}},account:{token:'not-to-export'}},location:{hostname:'www.douyin.com',pathname:'/video/'+id},performance:{getEntriesByType:()=>[{name:url},{name:'https://v3-web.douyinvod.com.evil.org/video/tos/forged'},{name:'https://v3-web.douyinvod.com/account/data'}]},URL};
+let result=JSON.parse(vm.runInNewContext(source,ctx));
+assert.ok(result.media.some(v=>v.url===url&&v.kind==='VIDEO'));checks++;
+assert.ok(!result.media.some(v=>v.url.includes('evil.org')||v.url.includes('/account/')));checks++;
+assert.strictEqual(JSON.parse(result.douyin).item_list[0].aweme_id,id);checks++;
+assert.ok(!JSON.stringify(result).includes('not-to-export')&&!result.douyin.includes('unrelated'));checks++;
+ctx.location.pathname='/video/7312345678901234569';result=JSON.parse(vm.runInNewContext(source,ctx));assert.strictEqual(result.douyin,'');checks++;
+console.log('PASS Douyin browser scanner: '+checks+' checks (actual generated script, signed playback URL, selected-work state, no account export)');

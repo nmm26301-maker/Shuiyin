@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.*;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import java.io.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -14,6 +16,12 @@ final class WebsiteSearch {
     private static final String[] INPUT={"#link-area","#main_page_text","input.n-input__input-el"};
     private static final String[] BUTTON={"#download-button","#submit","button.button-1"};
     static LinkExtractor.Result parse(Activity activity,int index,String source)throws Exception {
+        long started=System.nanoTime();JobControl.check();String apiError=index==0?"未配置授权 Cobalt API，当前使用网页辅助":"";
+        android.content.SharedPreferences prefs=activity.getSharedPreferences("link_settings",0);
+        try{
+            if(index==1)return ProviderHttp.tiktokio(source);
+            if(index==0&&!prefs.getString("cobalt_endpoint","").isEmpty())return ProviderHttp.cobalt(source,prefs.getString("cobalt_endpoint",""),prefs.getString("cobalt_key",""));
+        }catch(Exception error){JobControl.check();apiError=error.getMessage()==null?"接口请求失败":error.getMessage();}
         JobControl.check();DownloadSites.Site site=DownloadSites.ALL.get(index);
         String script;try(InputStream in=activity.getResources().openRawResource(R.raw.search_sites);ByteArrayOutputStream out=new ByteArrayOutputStream()){
             byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);script=out.toString("UTF-8");
@@ -22,10 +30,10 @@ final class WebsiteSearch {
         Session session=new Session(activity,site,source,script.replace("/*CONFIG*/",config.toString()));
         session.ui.post(session::start);
         try{
-            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(38);
+            long deadline=started+TimeUnit.SECONDS.toNanos(38);
             while(!session.latch.await(150,TimeUnit.MILLISECONDS)){JobControl.check();if(System.nanoTime()>deadline)break;}
             JobControl.check();synchronized(session.result){if(!session.result.items.isEmpty()){LinkExtractor.Result copy=new LinkExtractor.Result();copy.source=session.result.source;copy.title=session.result.title;for(LinkExtractor.Item item:session.result.items)copy.addItem(item);return copy;}}
-            throw new IOException(session.error.isEmpty()?"网站超时或未返回可下载素材":session.error);
+            throw new IOException((apiError.isEmpty()?"":apiError+"；")+(session.error.isEmpty()?"网页未返回素材，可用网站验证后重试":session.error));
         }finally{session.ui.post(session::close);}
     }
     private static final class Session {
@@ -36,13 +44,17 @@ final class WebsiteSearch {
         void start(){
             if(closed||activity.isDestroyed()||activity.isFinishing()){close();return;}
             try{
-                view=new WebView(activity);WebSettings settings=view.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);
+                view=new WebView(activity);
+                ViewGroup host=activity.findViewById(android.R.id.content);
+                if(host==null)throw new IllegalStateException("No window host");
+                host.addView(view,0,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+                WebSettings settings=view.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);
                 settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setMediaPlaybackRequiresUserGesture(true);
                 CookieManager.getInstance().setAcceptThirdPartyCookies(view,false);WebSessionCookies.enable();
                 view.setDownloadListener((url,agent,disposition,mime,length)->capture(url,mime,disposition,agent));
                 view.setWebViewClient(new WebViewClient(){
                     @Override public boolean shouldOverrideUrlLoading(WebView browser,WebResourceRequest request){
-                        String url=request.getUrl().toString();if(!DownloadSites.mediaKind(url,"","").isEmpty()){capture(url,"","",settings.getUserAgentString());return true;}
+                        String url=request.getUrl().toString();if(!request.isForMainFrame())return !EngineMetadata.https(url);if(!DownloadSites.mediaKind(url,"","").isEmpty()){capture(url,"","",settings.getUserAgentString());return true;}
                         return !site.owns(url);
                     }
                     @Override public WebResourceResponse shouldInterceptRequest(WebView browser,WebResourceRequest request){
@@ -72,6 +84,6 @@ final class WebsiteSearch {
                 ui.postDelayed(tick,500);
             });
         }
-        void close(){if(closed)return;closed=true;ui.removeCallbacks(tick);if(view!=null){view.stopLoading();view.destroy();view=null;}latch.countDown();}
+        void close(){if(closed)return;closed=true;ui.removeCallbacks(tick);if(view!=null){view.stopLoading();if(view.getParent() instanceof ViewGroup)((ViewGroup)view.getParent()).removeView(view);view.destroy();view=null;}latch.countDown();}
     }
 }

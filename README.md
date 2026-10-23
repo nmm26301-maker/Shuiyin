@@ -1,8 +1,16 @@
-# 水印工坊 0.6.8 · Android
+# 水印工坊 0.6.9 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 14。沿用原工程签名，可以覆盖安装 0.6.7。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 15。沿用原工程签名，可以覆盖安装 0.6.8。
 
-## 本次更新 0.6.8
+## 本次更新 0.6.9
+
+- 修正三站网页自动解析器的窗口生命周期：WebView 先挂载到真实 Activity 窗口，关闭时解除挂载并销毁；不再使用未挂载的网页对象充当已接通接口。页面自动化仍取决于站点兼容性，未连接 Android 设备验证。
+- TikTokio 使用当前网页实际提交的 multipart POST（page + ajax）直接解析 JSON，返回的完整媒体继续走原下载流程；接口拒绝、HTML 验证页和错误 JSON 会给出原因，随后尝试正常网页辅助。此次在线样例返回了“链接格式错误”，**未验证成功下载**。
+- Cobalt 新增正式接口协议、完整媒体 / picker 解析，以及实例地址、API Key 配置。入口在“链接提取 → 菜单 → 专用解析服务设置”。需要自建或已获授权的实例；cobalt.tools 首页不是可随意调用的公共 API。未配置时保留网站辅助，不能据此宣称接口可用。授权请求不跟随重定向，防止 Key 被转发。
+- 搜索进度中可选择“网站验证 / 查看失败原因”，停止本次任务后打开对应正常网页。验证完成可重试四路搜索；应用只复用本应用的 Cookie / User-Agent，不导出其他浏览器会话，也不绕过验证。原来的图片修复与下载保存流程继续使用。
+- 抖音普通网页播放新增无扩展名的公开 CDN / play 请求识别；读取当前作品的网页媒体状态，排除其他作品和账户数据。正常登录 / 验证后可重试原解析。此功能不解密 DRM，**尚未证明抖音实链下载打通**。
+
+## 0.6.8 并行搜索
 
 - 粘贴一次分享链接，点击“四路搜索素材”，原解析与 Cobalt、TikTokio、GreenVideo 同时运行。原解析仍使用已配置的专用接口，并保留本地引擎回退；图片模式和多链接队列也使用同一搜索流程。四路不是依次打开网页，也不需要用户逐站手动提交。
 - 三个网站使用各自网页的实际表单，由应用内 WebView 自动填入、提交并收集结果。没有硬编码猜测的公共 API；不绕过验证或登录。每路显示找到素材、验证要求、组件异常、失败或超时。搜索总时限 45 秒，网站单路 38 秒，取消及超时会清理网页和任务；部分失败仍保留成功结果。
@@ -85,7 +93,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.8.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.9.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

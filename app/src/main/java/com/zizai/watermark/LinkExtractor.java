@@ -322,7 +322,7 @@ public final class LinkExtractor {
             HttpURLConnection c=(HttpURLConnection)new URL(next).openConnection();
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(10000);c.setReadTimeout(12000);
-            c.setRequestProperty("User-Agent",agent.isEmpty()?"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36":agent);
+            c.setRequestProperty("User-Agent",agent.isEmpty()?WebSessionCookies.userAgent("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36"):agent);
             if(!referer.isEmpty()&&referer.startsWith("https://"))c.setRequestProperty("Referer",referer);
             c.setRequestProperty("Accept","text/html,video/*,image/*,audio/*,*/*;q=0.5");
             String cookie=CookieFile.header(cookies,next);if(cookie.isEmpty())cookie=WebSessionCookies.header(next);if(!cookie.isEmpty())c.setRequestProperty("Cookie",cookie);

@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
     private String incomingLink="";
     private boolean linkScreen;
     private android.webkit.WebView webPreview;
+    private DownloadSites.Site pendingSearchSite;
     private java.util.concurrent.atomic.AtomicBoolean jobCancel;
     private java.util.List<Uri> batchFiles=new java.util.ArrayList<>();
     private boolean batchMode;
@@ -76,6 +77,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        try{android.webkit.CookieManager.getInstance();WebSessionCookies.enable();WebSessionCookies.configureAgent(android.webkit.WebSettings.getDefaultUserAgent(this));}catch(RuntimeException ignored){}
         LinkQueueStore.recover(this);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
@@ -295,14 +297,18 @@ public class MainActivity extends Activity {
         if(busy)return;String url=LinkExtractor.extractLink(input);
         if(url.isEmpty()) {toast("请输入有效的 HTTPS 链接");return;}
         extracted=null;incomingLink=url;
-        startBusy("四路同时搜索素材…");
+        pendingSearchSite=null;startBusy("四路同时搜索素材…");
+        Button verify=button("网站验证 / 查看失败原因",PANEL);transferView.addView(verify,lp(-1,44));verify.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("停止本次搜索并打开网站").setItems(new String[]{"Cobalt","TikTokio","GreenVideo"},(d,k)->{DownloadSites.Site site=DownloadSites.ALL.get(k);if(busy){pendingSearchSite=site;jobCancel.set(true);}else openWebAssist(site.url,site,url);}).setNegativeButton("继续搜索",null).show());
         runJob(()->{
             try {
                 LinkExtractor.Result r=parseCombinedLink(url,images);
                 LinkExtractor.Result parsed=r;
-                mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();if(cancelled()){toast("已取消解析");return;}extracted=parsed;saveLinkRecord(url,parsed.title);showLinkExtract();});
-            }catch(Exception error){mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();showLinkExtract();if(!cancelled())new AlertDialog.Builder(this).setTitle("尚未提取到素材").setMessage(ExtractionErrors.message(error)).setPositiveButton("网页辅助",(d,w)->showWebAssist(url)).setNeutralButton("更多下载入口",(d,w)->showDownloadSites()).setNegativeButton("返回",null).show();});}
+                mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();if(cancelled()){if(!openPendingSearchSite(url))toast("已取消解析");return;}extracted=parsed;saveLinkRecord(url,parsed.title);showLinkExtract();});
+            }catch(Exception error){mainHandler.post(()->{if(isFinishing()||isDestroyed())return;stopBusy();if(cancelled()&&openPendingSearchSite(url))return;showLinkExtract();if(!cancelled())new AlertDialog.Builder(this).setTitle("尚未提取到素材").setMessage(ExtractionErrors.message(error)).setPositiveButton("网页辅助",(d,w)->showWebAssist(url)).setNeutralButton("更多下载入口",(d,w)->showDownloadSites()).setNegativeButton("返回",null).show();});}
         });
+    }
+    private boolean openPendingSearchSite(String url){
+        if(pendingSearchSite==null)return false;DownloadSites.Site site=pendingSearchSite;pendingSearchSite=null;openWebAssist(site.url,site,url);return true;
     }
     private LinkExtractor.Result parseCombinedLink(String url,boolean images)throws Exception {
         LinkExtractor.ensurePublic(url);JobControl.check();
@@ -918,7 +924,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.8")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.9")
         .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
@@ -1099,7 +1105,7 @@ public class MainActivity extends Activity {
     private void offerWebsiteDownload(android.webkit.WebView view,LinkExtractor.Result session,Button results,String url,String agent,String disposition,String mime){
         if(webPreview!=view||busy)return;String kind=DownloadSites.mediaKind(url,mime,disposition);
         if(kind.isEmpty()){toast("该下载未识别为 HTTPS 媒体；可用外部浏览器继续下载。");return;}
-        LinkExtractor.Item item=new LinkExtractor.Item(LinkExtractor.Kind.valueOf(kind),url,"网站下载素材",view.getUrl(),false,0,agent);
+        LinkExtractor.Item item=new LinkExtractor.Item(LinkExtractor.Kind.valueOf(kind),url,"网站下载素材",view.getUrl(),false,0,agent,session.source);
         synchronized(session){session.addItem(item);}results.setText("查看已发现素材 · "+session.items.size()+" 项");
         new AlertDialog.Builder(this).setTitle("保存网站素材").setMessage("保存到手机媒体库，沿用当前去水印设置。")
             .setNegativeButton("暂不保存",null).setPositiveButton("保存到手机",(d,w)->{extracted=session;downloadOne(item);}).show();
@@ -1117,8 +1123,12 @@ public class MainActivity extends Activity {
         android.content.SharedPreferences p=getSharedPreferences("link_settings",0);LinearLayout form=vertical();pad(form,20,12,20,8);form.setBackgroundColor(PANEL);
         form.addView(text("平台解析服务可以处理专用平台链接。启用后会把你提交的链接发给该服务。留空使用手机内置引擎与网页解析。",14,MUTED,false),lp(-1,-2));
         EditText endpoint=new EditText(this);endpoint.setSingleLine(true);endpoint.setTextColor(WHITE);endpoint.setHintTextColor(MUTED);endpoint.setHint("https://你的服务/api/parse");endpoint.setText(p.getString("endpoint",""));form.addView(endpoint,lp(-1,58));
-        new AlertDialog.Builder(this).setTitle("平台解析设置").setView(form).setNegativeButton("取消",null).setNeutralButton("恢复本机解析",(d,w)->p.edit().remove("endpoint").apply()).setPositiveButton("保存",(d,w)->{
-            String address=endpoint.getText().toString().trim();try{java.net.URI uri=new java.net.URI(address);if(!address.isEmpty()&&(!"https".equalsIgnoreCase(uri.getScheme())||uri.getHost()==null||uri.getRawUserInfo()!=null))throw new Exception();p.edit().putString("endpoint",address).apply();toast("解析方式已保存");}catch(Exception e){toast("请输入 HTTPS 解析接口地址");}
+        form.addView(text("Cobalt 自动接口：填写自建或已获授权的实例。留空走网站辅助；网站首页不是 API。",12,MUTED,false),lp(-1,-2));
+        EditText cobalt=new EditText(this);cobalt.setSingleLine(true);cobalt.setTextColor(WHITE);cobalt.setHintTextColor(MUTED);cobalt.setHint("https://你的 Cobalt 实例/");cobalt.setText(p.getString("cobalt_endpoint",""));form.addView(cobalt,lp(-1,52));
+        EditText key=new EditText(this);key.setSingleLine(true);key.setTextColor(WHITE);key.setHintTextColor(MUTED);key.setHint("Cobalt API Key（实例要求时填写）");key.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setText(p.getString("cobalt_key",""));form.addView(key,lp(-1,52));
+        ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(form);
+        new AlertDialog.Builder(this).setTitle("平台解析设置").setView(settingsScroll).setNegativeButton("取消",null).setNeutralButton("清除接口配置",(d,w)->p.edit().remove("endpoint").remove("cobalt_endpoint").remove("cobalt_key").apply()).setPositiveButton("保存",(d,w)->{
+            String address=endpoint.getText().toString().trim(),cobaltAddress=cobalt.getText().toString().trim(),secret=key.getText().toString().trim();try{if(!address.isEmpty()&&!EngineMetadata.https(address))throw new Exception();if(!cobaltAddress.isEmpty())ProviderHttp.cobaltRequest("https://example.org/",cobaltAddress,secret);p.edit().putString("endpoint",address).putString("cobalt_endpoint",cobaltAddress).putString("cobalt_key",secret).apply();toast("解析方式已保存");}catch(Exception e){toast("请检查 HTTPS 接口地址及 API Key 格式");}
         }).show();
     }
     private void runJob(Runnable work){
@@ -1173,6 +1183,7 @@ public class MainActivity extends Activity {
         LinearLayout actions=horizontal();pad(actions,12,4,12,8);
         Button results=button("查看已发现素材",PINK);actions.addView(results,new LinearLayout.LayoutParams(0,dp(48),1));root.addView(actions);
         Button scan=button("提取当前页面",0xFF6650BA);actions.addView(scan,new LinearLayout.LayoutParams(0,dp(48),1));
+        java.util.concurrent.atomic.AtomicReference<String> currentPage=new java.util.concurrent.atomic.AtomicReference<>(url);
         LinkExtractor.Result session=new LinkExtractor.Result();session.source=site!=null&&!source.isEmpty()?source:url;session.title=site==null?"网页播放发现的素材":site.name+" 下载素材";
         if(extracted!=null&&extracted.source.equals(url)){for(LinkExtractor.Item item:extracted.items)session.addItem(item);session.description=extracted.description;session.title=extracted.title;}
         results.setOnClickListener(v->{
@@ -1190,27 +1201,33 @@ public class MainActivity extends Activity {
             external.setOnClickListener(v->{if(!source.isEmpty())copyDownloadSource(source);try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(site.url)));}catch(Exception e){toast("未找到浏览器");}});
             view.setDownloadListener((download,agent,disposition,mime,length)->offerWebsiteDownload(view,session,results,download,agent,disposition,mime));
         }
+        Button retry=button("完成验证 / 登录后重试四路搜索",0xFF6650BA);root.addView(retry,root.indexOfChild(view));
+        retry.setOnClickListener(v->{android.webkit.CookieManager.getInstance().flush();String original=source.isEmpty()?url:source;stopWebPreview();parseSharedLink(original);});
         view.getSettings().setJavaScriptEnabled(true);view.getSettings().setDomStorageEnabled(true);view.getSettings().setAllowFileAccess(false);view.getSettings().setAllowContentAccess(false);
         view.getSettings().setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         view.getSettings().setMediaPlaybackRequiresUserGesture(true);
         android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(view,false);
         WebSessionCookies.enable();
         view.setWebViewClient(new android.webkit.WebViewClient(){
+            @Override public void onPageStarted(android.webkit.WebView browser,String page,Bitmap icon){currentPage.set(page);}
             @Override public boolean shouldOverrideUrlLoading(android.webkit.WebView browser,android.webkit.WebResourceRequest request){
-                String next=request.getUrl().toString();return !next.startsWith("https://");
+                String next=request.getUrl().toString();if(next.startsWith("https://"))return false;toast("应用内只打开 HTTPS 页面，请留在网页继续操作");return true;
             }
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(android.webkit.WebView browser,android.webkit.WebResourceRequest request){
                 String next=request.getUrl().toString();
                 try{
                     LinkExtractor.ensurePublic(next);
-                    String path=request.getUrl().getPath();if(path==null)path="";path=path.toLowerCase(Locale.ROOT);
-                    LinkExtractor.Kind kind=path.matches(".*\\.(mp4|m4v|mov|webm|m3u8|mpd)$")?LinkExtractor.Kind.VIDEO:path.matches(".*\\.(mp3|m4a|aac|ogg|wav)$")?LinkExtractor.Kind.AUDIO:null;
-                    if(kind!=null&&session.items.size()<24){synchronized(session){session.add(kind,next,"网页播放媒体直链");}mainHandler.post(()->{if(webPreview==view)results.setText("查看已发现素材 · "+session.items.size()+" 项");});}
+                    if(!PlaybackRequests.onWorkPage(session.source,currentPage.get()))return null;
+                    LinkExtractor.Kind kind=PlaybackRequests.kind(next,session.source);
+                    if(kind!=null){String referer=PlaybackRequests.header(request.getRequestHeaders(),"Referer",url),agent=PlaybackRequests.header(request.getRequestHeaders(),"User-Agent",WebSessionCookies.userAgent(""));
+                        synchronized(session){session.addItem(new LinkExtractor.Item(kind,next,"网页播放媒体直链",referer,false,0,agent,session.source));}
+                        mainHandler.post(()->{if(webPreview==view)results.setText("查看已发现素材 · "+session.items.size()+" 项");});
+                    }
                     return null;
                 }catch(Exception e){return new android.webkit.WebResourceResponse("text/plain","UTF-8",new java.io.ByteArrayInputStream(new byte[0]));}
             }
             @Override public void onPageFinished(android.webkit.WebView browser,String page){
-                if(webPreview!=view)return;if(site==null)session.source=page;String title=browser.getTitle();if(title!=null&&!title.isEmpty())session.title=title;
+                if(webPreview!=view)return;currentPage.set(page);if(DouyinParser.matches(session.source)&&DouyinParser.id(session.source).isEmpty()&&DouyinParser.matches(page)&&!DouyinParser.id(page).isEmpty())session.source=page;android.webkit.CookieManager.getInstance().flush();String title=browser.getTitle();if(title!=null&&!title.isEmpty())session.title=title;
                 if(site==null)readWebMetadata(browser,session,results,page);
             }
         });
@@ -1218,7 +1235,7 @@ public class MainActivity extends Activity {
     }
     private void readWebMetadata(android.webkit.WebView view,LinkExtractor.Result session,Button results,String page){readWebMetadata(view,session,results,page,false);}
     private void readWebMetadata(android.webkit.WebView view,LinkExtractor.Result session,Button results,String page,boolean downloads){
-        if(webPreview!=view||page==null)return;
+        if(webPreview!=view||page==null||!PlaybackRequests.onWorkPage(session.source,page))return;
         // Read the displayed note, excluding cookies, account stores and comments.
         String script=WebMediaScanner.script();
         view.evaluateJavascript(script,value->{
@@ -1226,6 +1243,7 @@ public class MainActivity extends Activity {
             try{Object raw=new org.json.JSONTokener(value).nextValue();if(!(raw instanceof String)||((String)raw).length()>1_500_000)return;
                 org.json.JSONObject object=new org.json.JSONObject((String)raw);LinkExtractor.Result metadata;
                 if(downloads){metadata=new LinkExtractor.Result();metadata.source=page;String title=view.getTitle();if(title!=null)metadata.title=title;}
+                else if(DouyinParser.matches(page)&&!object.optString("douyin").isEmpty())metadata=DouyinParser.parseState(new org.json.JSONObject(object.optString("douyin")),page);
                 else if(XhsParser.matches(page)&&!object.optString("state").isEmpty()){
                     LinkExtractor.Result candidates=XhsParser.parseState(object.optString("state"),page);metadata=new LinkExtractor.Result();metadata.source=page;metadata.title=candidates.title;metadata.description=candidates.description;boolean video=false;
                     for(LinkExtractor.Item item:candidates.items){if(item.kind==LinkExtractor.Kind.IMAGE)metadata.addItem(item);else if(item.kind==LinkExtractor.Kind.VIDEO&&!video&&!item.label.contains("原始")){metadata.addItem(item);video=true;}}

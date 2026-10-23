@@ -13,9 +13,9 @@ final class DownloadSites {
         boolean owns(String page){return host(url).equals(host(page));}
     }
     static final List<Site> ALL=java.util.Collections.unmodifiableList(java.util.Arrays.asList(
-        new Site("Cobalt","https://cobalt.tools/","推特 Twitter X x.com 视频 下载 cobalt.tools","推特 / X 视频 · 网站解析，生成下载链接后保存"),
-        new Site("TikTokio","https://tiktokio.bio/","抖音 Douyin TikTok 海外版 短视频 下载 tiktokio.bio","TikTok 视频 · 抖音链接入口已收录，实际支持待验证"),
-        new Site("GreenVideo","https://greenvideo.cc/","小红书 XHS B站 B 站 哔哩哔哩 bilibili b23.tv 视频 下载 greenvideo.cc","小红书视频 · B 站链接入口已收录，实际支持待验证")
+        new Site("Cobalt","https://cobalt.tools/","推特 Twitter X x.com 视频 下载 cobalt.tools","推特 / X 视频 · 可配置授权 Cobalt API，或使用网页辅助"),
+        new Site("TikTokio","https://tiktokio.bio/","抖音 Douyin TikTok 海外版 短视频 下载 tiktokio.bio","TikTok 视频 · 使用实际表单请求；不保证支持抖音"),
+        new Site("GreenVideo","https://greenvideo.cc/","小红书 XHS B站 B 站 哔哩哔哩 bilibili b23.tv 视频 下载 greenvideo.cc","小红书 / B 站 · 网页辅助，需要验证时请手动完成")
     ));
     static Site recommended(String source){
         String h=host(source);

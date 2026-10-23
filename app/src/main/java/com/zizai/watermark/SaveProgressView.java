@@ -19,7 +19,7 @@ final class SaveProgressView extends LinearLayout {
         GradientDrawable panel=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xFF142433,INK,0xFF1E1936});panel.setCornerRadius(d(24));panel.setStroke(d(1),0xFF426879);setBackground(panel);
         TextView tag=text("●  TRANSFER CORE  /  媒体保存",10,CYAN,true);tag.setLetterSpacing(.12f);addView(tag);
         title=text("正在保存素材",23,0xFFF4F8FF,true);LayoutParams tp=new LayoutParams(-1,-2);tp.topMargin=d(12);addView(title,tp);
-        phase=text(label,13,MUTED,false);phase.setMinHeight(d(44));phase.setMaxLines(3);addView(phase,new LayoutParams(-1,-2));
+        phase=text(label,13,MUTED,false);phase.setMinHeight(d(44));phase.setMaxLines(8);addView(phase,new LayoutParams(-1,-2));
         gauge=new Gauge(context);addView(gauge,new LayoutParams(-1,d(185)));
         amount=text("等待素材大小",13,0xFFDCE7F5,false);amount.setGravity(Gravity.CENTER);addView(amount,new LayoutParams(-1,d(28)));
         LinearLayout row=new LinearLayout(context);row.setOrientation(HORIZONTAL);row.setPadding(0,d(17),0,d(15));
