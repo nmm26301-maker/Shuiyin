@@ -313,7 +313,7 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.11\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.12\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
@@ -955,7 +955,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.11")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.12")
         .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}

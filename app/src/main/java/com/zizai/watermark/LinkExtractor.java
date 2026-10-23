@@ -157,19 +157,20 @@ public final class LinkExtractor {
         String source=input;if(DouyinParser.id(source).isEmpty())source=resolveShare(context,input);
         String mobile=DouyinParser.sharePage(source);if(mobile.isEmpty())throw new IOException("抖音短链接未展开到作品页面");
         HttpURLConnection connection=open(mobile,"",cookies);
+        Result candidates;
         try{
-            Result candidates=DouyinParser.parseHtml(new String(limitedRead(connection.getInputStream(),HTML_LIMIT),StandardCharsets.UTF_8),source),result=new Result();result.source=source;result.title=candidates.title;result.description=candidates.description;
-            if(candidates.count(Kind.VIDEO)==0)return candidates;
-            Exception last=null;int attempts=0;
-            for(Item item:candidates.items){if(item.kind!=Kind.VIDEO||attempts++>=3)continue;JobControl.check();HttpURLConnection probe=null;
-                try{probe=open(item.url,mobile,cookies,"bytes=0-31");byte[] bytes=new byte[32];int n=0;
-                    try(InputStream in=probe.getInputStream()){while(n<bytes.length){int count=in.read(bytes,n,bytes.length-n);if(count<0)break;n+=count;}}
-                    if(!MediaSignature.accepts("video/mp4",bytes,n))throw new IOException("抖音候选未返回视频文件");
-                    result.addItem(new Item(Kind.VIDEO,probe.getURL().toExternalForm(),item.label,mobile,false,0,"",source));return result;
-                }catch(Exception error){JobControl.check();last=error;}finally{if(probe!=null)probe.disconnect();}
-            }throw new IOException("抖音分享页已解析，但媒体地址无法下载",last);
-        }
-        finally{connection.disconnect();}
+            candidates=DouyinParser.parseHtml(new String(limitedRead(connection.getInputStream(),HTML_LIMIT),StandardCharsets.UTF_8),source);
+        }finally{connection.disconnect();}
+        Result prepared=new Result();prepared.source=source;prepared.title=candidates.title;prepared.description=candidates.description;
+        for(Item item:candidates.items)prepared.addItem(new Item(item.kind,item.url,item.label,mobile,false,0,WebSessionCookies.userAgent(""),source));
+        return verifyVideoCandidates(context,prepared);
+    }
+    static Result verifyVideoCandidates(Context context,Result candidates)throws Exception {
+        return verifyVideoCandidates(context,candidates,8000);
+    }
+    static Result verifyVideoCandidates(Context context,Result candidates,long budgetMs)throws Exception {
+        java.io.File cookies=new java.io.File(context.getFilesDir(),"link-cookies.txt");
+        return VideoCandidates.select(candidates,(item,deadline)->open(item.url,item.referer,cookies,"bytes=0-63","",item.userAgent,deadline),budgetMs);
     }
     /** Optional self-hosted platform engine. Links are sent only to the configured endpoint. */
     public static Result parsePlatform(String share,String endpoint)throws Exception {
@@ -316,12 +317,18 @@ public final class LinkExtractor {
     private static HttpURLConnection open(String raw,String referer,java.io.File cookies,String range) throws Exception {return open(raw,referer,cookies,range,"");}
     private static HttpURLConnection open(String raw,String referer,java.io.File cookies,String range,String validator) throws Exception {return open(raw,referer,cookies,range,validator,"");}
     private static HttpURLConnection open(String raw,String referer,java.io.File cookies,String range,String validator,String agent) throws Exception {
+        return open(raw,referer,cookies,range,validator,agent,0);
+    }
+    private static HttpURLConnection open(String raw,String referer,java.io.File cookies,String range,String validator,String agent,long deadline) throws Exception {
         String next=raw;
         for(int i=0;i<5;i++) {
             JobControl.check();ensurePublic(next);
+            long remaining=deadline==0?0:java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(deadline-System.nanoTime());
+            if(deadline!=0&&remaining<=0)throw new IOException("视频预检超时");
             HttpURLConnection c=(HttpURLConnection)new URL(next).openConnection();
             c.setInstanceFollowRedirects(false);
-            c.setConnectTimeout(10000);c.setReadTimeout(12000);
+            c.setConnectTimeout(deadline==0?10000:(int)Math.max(1,Math.min(3000,remaining)));
+            c.setReadTimeout(deadline==0?12000:(int)Math.max(1,Math.min(3000,remaining)));
             c.setRequestProperty("User-Agent",agent.isEmpty()?WebSessionCookies.userAgent("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36"):agent);
             if(!referer.isEmpty()&&referer.startsWith("https://"))c.setRequestProperty("Referer",referer);
             c.setRequestProperty("Accept","text/html,video/*,image/*,audio/*,*/*;q=0.5");

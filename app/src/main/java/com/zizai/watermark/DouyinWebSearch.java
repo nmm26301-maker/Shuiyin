@@ -18,12 +18,13 @@ final class DouyinWebSearch {
         long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(34);
         try{
             while(!session.done.await(100,TimeUnit.MILLISECONDS)){JobControl.check();if(System.nanoTime()>=end)break;}
-            JobControl.check();synchronized(session.result){
+            JobControl.check();LinkExtractor.Result copy=null;synchronized(session.result){
                 if(!LinkSaveQueue.choose(session.result,LinkSaveQueue.Mode.MEDIA).isEmpty()){
-                    LinkExtractor.Result copy=new LinkExtractor.Result();copy.source=source;copy.title=session.result.title;copy.description=session.result.description;
-                    for(LinkExtractor.Item item:session.result.items)copy.addItem(item);return copy;
+                    copy=new LinkExtractor.Result();copy.source=source;copy.title=session.result.title;copy.description=session.result.description;
+                    for(LinkExtractor.Item item:session.result.items)copy.addItem(item);
                 }
             }
+            if(copy!=null){session.ui.post(session::close);long remaining=Math.max(0,Math.min(8000,TimeUnit.NANOSECONDS.toMillis(end-System.nanoTime())));return LinkExtractor.verifyVideoCandidates(activity,copy,remaining);}
             throw new IOException("抖音网页尚未返回这条作品的媒体，需要时打开原作品完成正常验证或播放");
         }finally{session.ui.post(session::close);}
     }

@@ -1,8 +1,15 @@
-# 水印工坊 0.6.11 · Android
+# 水印工坊 0.6.12 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 17。沿用原工程签名，可以覆盖安装 0.6.10。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 18。沿用原工程签名，可以覆盖安装 0.6.11。
 
-## 本次更新 0.6.11
+## 本次更新 0.6.12
+
+- 抖音自动网页提取到直链后，先检查 HTTP 状态、起始范围、已知总大小和最多 64 字节的媒体头，再参与原解析结果竞争，避免网页 / 错误响应地址抢先取消其他解析路径。
+- 分享页与自动网页复用同一个候选预检器：从固定前三个扩展为预算内最多 24 个地址，预检预算为 8 秒，网页路径同时受原有总预算约束。原地址签名、Referer、User-Agent、原作品与封面继续传给原下载流程。
+- 预检网络请求在后台执行，不持有结果锁，不阻塞网页关闭；失败、取消与超时均释放连接。照片作品继续原流程，已知或服务端声明的分段流和引擎选择器交给原引擎处理，不宣称已通过直链预检。
+- 使用本地真实 HTTP 服务和 FFmpeg 生成的 MP4 测试媒体预检及后续候选回退。**尚未完成抖音实链和 Android 真机下载验证，也未确认三站全部可用。** 媒体头预检不等于完整解码或成功保存。
+
+## 0.6.11 网页回退与诊断
 
 - 修复抖音网页状态暂缺媒体时，当前播放器明明已有 HTTPS 视频却被一并丢弃的问题。页面已声明的私密、禁止访问或加密限制继续终止提取，不进入播放器回退。
 - 浏览器扫描带回当时的实际 URL，校验作品编号，防止单页跳转后的过期回调错配素材；已有 currentSrc 时，其余 source 候选不再当作当前播放地址。
@@ -107,7 +114,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.11.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.12.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 
