@@ -7,3 +7,6 @@ local.properties
 .DS_Store
 
 build-offline/
+
+build-search/
+.cache/
