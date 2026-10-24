@@ -75,6 +75,7 @@ final class ProviderHttp {
             String url=object.optString("url"),filename=object.optString("filename"),kind=DownloadSites.mediaKind(url,"","attachment; filename=\""+filename+"\"");
             add(result,kind.isEmpty()?"VIDEO":kind,url,filename,endpoint);
         }else if(status.equals("picker")){
+            add(result,"AUDIO",object.optString("audio"),object.optString("audioFilename","图集背景音频"),endpoint);
             JSONArray picker=object.optJSONArray("picker");if(picker!=null)for(int i=0;i<Math.min(24,picker.length());i++){
                 JSONObject row=picker.optJSONObject(i);if(row==null)continue;String type=row.optString("type"),kind=type.equals("photo")?"IMAGE":type.equals("video")?"VIDEO":type.equals("audio")?"AUDIO":"";add(result,kind,row.optString("url"),"Cobalt "+type,endpoint);
             }

@@ -75,6 +75,18 @@ public final class ProviderHttpTests {
             try{ProviderHttp.execute(request,share,false,wire::open,1000);throw new AssertionError("in-flight cancel ignored");}
             catch(InterruptedIOException expected){check(true,"in-flight cancellation preserved instead of converted to ordinary service failure");}finally{trigger.join(1000);}
         }finally{JobControl.detach();}
+        String album="{\"status\":\"picker\",\"audio\":\"https://cdn.example.org/music?sig=a%2Fb\",\"audioFilename\":\"background.mp3\",\"picker\":[{\"type\":\"photo\",\"url\":\"https://cdn.example.org/p.jpg\"}]}";
+        LinkExtractor.Result collection=ProviderHttp.cobaltResult(album,share,cobalt.url);
+        check(collection.count(LinkExtractor.Kind.IMAGE)==1&&collection.count(LinkExtractor.Kind.AUDIO)==1,"documented picker background audio retained with photos");
+        LinkExtractor.Item sound=collection.items.stream().filter(i->i.kind==LinkExtractor.Kind.AUDIO).findFirst().orElseThrow();
+        check(sound.url.endsWith("a%2Fb")&&sound.label.equals("background.mp3"),"opaque audio URL, signed query and audio filename retained");
+        check(sound.source.equals(share)&&sound.referer.equals(cobalt.url),"album audio uses existing downloader headers and work origin");
+        collection=ProviderHttp.cobaltResult(album.replace("https://cdn.example.org/music?sig=a%2Fb","http://cdn.example.org/music"),share,cobalt.url);
+        check(collection.count(LinkExtractor.Kind.AUDIO)==0&&collection.count(LinkExtractor.Kind.IMAGE)==1,"unsafe optional audio does not discard valid photos");
+        org.json.JSONObject large=new org.json.JSONObject(album);org.json.JSONArray photos=new org.json.JSONArray();
+        for(int i=0;i<24;i++)photos.put(new org.json.JSONObject().put("type","photo").put("url","https://cdn.example.org/"+i+".jpg"));large.put("picker",photos);
+        collection=ProviderHttp.cobaltResult(large.toString(),share,cobalt.url);
+        check(collection.items.size()==24&&collection.count(LinkExtractor.Kind.AUDIO)==1,"audio retained within shared 24-item limit");
         System.out.println("PASS native provider HTTP: "+checks+" checks (real local wire, auth, redirects, public form, response adapters)");
     }
 }

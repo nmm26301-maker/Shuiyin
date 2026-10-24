@@ -35,7 +35,10 @@
     var label=String(value.type||value.media_type||value.mimeType||value.mime||value.format||context||'');
     ['download_url','downloadUrl','video_url','videoUrl','play_url','playUrl','resource_url','resourceUrl'].forEach(k=>{if(typeof value[k]==='string')add(value[k],kind(value[k],label)||(/video|play/i.test(k)?'VIDEO':''),label);});
     if(typeof value.url==='string'&&/video|audio|image|photo|mp4|mp3/i.test(label))add(value.url,kind(value.url,label),label);
-    if(value.status==='picker'&&Array.isArray(value.picker))value.picker.forEach(v=>add(v.url,kind(v.url,v.type),v.type));
+    if(value.status==='picker'){
+      add(value.audio,'AUDIO',value.audioFilename||'图集背景音频');
+      if(Array.isArray(value.picker))value.picker.forEach(v=>add(v.url,kind(v.url,v.type),v.type));
+    }
     Object.keys(value).slice(0,80).forEach(k=>{if(/token|cookie|authorization|account|session/i.test(k))return;var v=value[k];
       if(typeof v==='string'&&/^(html|data|result)$/.test(k)&&/<a\b/i.test(v))links(new DOMParser().parseFromString(v,'text/html'));
       else if(typeof v==='object')object(v,depth+1,k);

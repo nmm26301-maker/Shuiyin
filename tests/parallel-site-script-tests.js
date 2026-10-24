@@ -36,5 +36,9 @@ function fixture(host='tiktokio.bio'){
   f.state.anchors.push(new f.HTMLAnchorElement('https://cdn.example.org/fresh.mp4?sig=a%2Fb','Download MP4'));r=f.poll();check(r.items.length===1,'new download result anchors captured');
   let a=new f.HTMLAnchorElement('blob:https://tiktokio.bio/id','','');a.click();r=f.poll();check(r.error.includes('blob'),'blob download explicitly unsupported, no fake media');
   f=fixture();f.poll();r=await f.response({success:true,links:{'Video (No Watermark)':'http://cdn.example.org/a.mp4','MP3':'https://user:secret@cdn.example.org/a.mp3'}});check(r.items.length===0,'HTTP and URL credentials rejected');
+  f=fixture('cobalt.tools');f.poll();r=await f.response({status:'picker',audio:'https://cdn.example.org/music?sig=a%2Fb',audioFilename:'background.mp3',picker:[{type:'photo',url:'https://cdn.example.org/photo.jpg'}]});
+  check(r.items.length===2&&r.items.some(x=>x.kind==='AUDIO'&&x.url.endsWith('a%2Fb')&&x.label==='background.mp3'),'documented Cobalt album audio and filename retained');
+  f=fixture('cobalt.tools');f.poll();r=await f.response({status:'picker',audio:'https://user:secret@cdn.example.org/music',picker:[{type:'photo',url:'https://cdn.example.org/photo.jpg'}]});
+  check(r.items.length===1&&r.items[0].kind==='IMAGE','unsafe background audio excluded without losing photos');
   console.log('PASS parallel website scripts: '+checks+' checks');
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -38,16 +38,18 @@ final class ParallelSearch {
                 if(result!=null&&!result.items.isEmpty()){
                     found.put(outcome.name,result);
                     states.put(outcome.name,"找到 "+result.items.size()+" 项");
+                }else if(result!=null&&!result.description.trim().isEmpty()){
+                    found.put(outcome.name,result);states.put(outcome.name,"仅取得文案，未取得可下载素材");
                 }else states.put(outcome.name,outcome.error.isEmpty()?"未找到素材":outcome.error);
                 if(status!=null)status.update(summary(states));
             }
             for(Source source:sources){LinkExtractor.Result result=found.get(source.name);if(result==null)continue;
                 for(LinkExtractor.Item item:result.items)combined.addItem(new LinkExtractor.Item(item.kind,item.url,source.name+" · "+item.label,item.referer,item.engine,item.engineIndex,item.userAgent,share,item.fallbackUrl));
                 if(combined.title.equals("网页素材")&&!result.title.isEmpty())combined.title=result.title;
-                if(combined.description.isEmpty())combined.description=result.description;
+                if(combined.description.trim().isEmpty())combined.description=result.description;
             }
             states.replaceAll((name,state)->state.equals("搜索中")?"搜索超时":state);combined.notice=summary(states);
-            if(combined.items.isEmpty())throw new SearchFailure("四路搜索未取得素材",states);
+            if(combined.items.isEmpty()&&combined.description.trim().isEmpty())throw new SearchFailure("四路搜索未取得素材",states);
             return combined;
         }finally{
             for(AtomicBoolean flag:flags)flag.set(true);for(Future<?> job:jobs)job.cancel(true);pool.shutdownNow();

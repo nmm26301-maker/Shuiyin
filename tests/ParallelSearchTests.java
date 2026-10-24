@@ -27,6 +27,14 @@ public final class ParallelSearchTests {
         LinkExtractor.Result provider=new LinkExtractor.Result();provider.addItem(new LinkExtractor.Item(LinkExtractor.Kind.IMAGE,"https://cdn.example.org/original","图片","https://greenvideo.cc/",false,0,"UA",share,"https://cdn.example.org/fallback"));
         merged=ParallelSearch.run(share,Collections.singletonList(new ParallelSearch.Source("GreenVideo",()->provider)),new AtomicBoolean(),1000,null);LinkExtractor.Item image=merged.items.get(0);
         check(image.referer.equals("https://greenvideo.cc/")&&image.source.equals(share)&&image.userAgent.equals("UA"),"HTTP referer separate from repair origin");check(image.fallbackUrl.endsWith("/fallback"),"photo fallback survives merge");check(RepairTemplate.key(image,1080,1440).startsWith("小红书|IMAGE"),"third-party photo uses original platform repair template");
+        LinkExtractor.Result caption=new LinkExtractor.Result();caption.title="作品标题";caption.description="作品文案\n第二行";
+        merged=ParallelSearch.run(share,Arrays.asList(new ParallelSearch.Source("原解析",()->caption),new ParallelSearch.Source("失败网站",()->{throw new IOException("未返回视频");})),new AtomicBoolean(),1000,null);
+        check(merged.items.isEmpty()&&merged.description.equals(caption.description)&&merged.title.equals(caption.title),"caption-only original result survives provider failures");
+        check(merged.notice.contains("仅取得文案")&&merged.notice.contains("失败网站：未返回视频"),"caption-only result does not masquerade as downloadable media");
+        LinkExtractor.Result blank=new LinkExtractor.Result();blank.description="  \n";
+        try{ParallelSearch.run(share,Collections.singletonList(new ParallelSearch.Source("空",()->blank)),new AtomicBoolean(),1000,null);throw new AssertionError("blank caption accepted");}catch(SearchFailure expected){checks++;}
+        merged=ParallelSearch.run(share,Arrays.asList(new ParallelSearch.Source("视频",()->result("https://cdn.example.org/clip.mp4")),new ParallelSearch.Source("文案",()->caption)),new AtomicBoolean(),1000,null);
+        check(merged.count(LinkExtractor.Kind.VIDEO)==1&&merged.description.equals(caption.description),"caption retained alongside another source's video");
         System.out.println("PASS parallel search: "+checks+" checks");
     }
 }

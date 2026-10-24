@@ -322,7 +322,7 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.13\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.14\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
@@ -475,11 +475,12 @@ public class MainActivity extends Activity {
         box.addView(summary,lp(-1,-2));gap(box,12);
         LinearLayout tabs=horizontal();box.addView(tabs,lp(-1,42));
         LinearLayout list=vertical();box.addView(list,lp(-1,-2));
+        int initial=r.count(LinkExtractor.Kind.VIDEO)>0?0:r.count(LinkExtractor.Kind.IMAGE)>0?1:r.count(LinkExtractor.Kind.AUDIO)>0?2:3;
         String[] labels={"视频","图片","音频","文案"};
         for(int i=0;i<labels.length;i++) {
             final int tab=i;
-            TextView btn=text(labels[i],13,i==0?WHITE:MUTED,i==0);btn.setGravity(Gravity.CENTER);
-            btn.setBackground(round(i==0?0xFF7E5BC2:0xFF363240,10));
+            TextView btn=text(labels[i],13,i==initial?WHITE:MUTED,i==initial);btn.setGravity(Gravity.CENTER);
+            btn.setBackground(round(i==initial?0xFF7E5BC2:0xFF363240,10));
             LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(0,dp(40),1);
             params.setMargins(0,0,dp(5),0);tabs.addView(btn,params);
             btn.setOnClickListener(v->{
@@ -491,7 +492,7 @@ public class MainActivity extends Activity {
                 fillLinkTab(list,r,tab);
             });
         }
-        fillLinkTab(list,r,0);
+        fillLinkTab(list,r,initial);
         gap(box,12);
         if(!r.items.isEmpty()) {
             Button all=button(getSharedPreferences("download_repair",0).getBoolean("enabled",true)?"保存全部 · 自动去水印（最多 24 项）":"保存全部可下载素材（最多 24 项）",0xFF6650BA);
@@ -964,7 +965,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.13")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.14")
         .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
