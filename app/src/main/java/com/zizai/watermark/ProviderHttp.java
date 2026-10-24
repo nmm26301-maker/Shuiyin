@@ -29,29 +29,38 @@ final class ProviderHttp {
         return new Request(endpoint,"application/json","",key.isEmpty()?"":"Api-Key "+key,body);
     }
     static LinkExtractor.Result execute(Request request,String share,boolean cobalt,Opener opener)throws Exception {
+        return execute(request,share,cobalt,opener,12000);
+    }
+    static LinkExtractor.Result execute(Request request,String share,boolean cobalt,Opener opener,long budgetMs)throws Exception {
+        long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(budgetMs);checkDeadline(deadline);
         JobControl.check();HttpURLConnection connection=opener.open(request.url);
         try{
-            connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");connection.setConnectTimeout(8000);connection.setReadTimeout(12000);connection.setDoOutput(true);
+            checkDeadline(deadline);int timeout=(int)Math.max(1,Math.min(4000,java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(deadline-System.nanoTime())));
+            connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");connection.setConnectTimeout(timeout);connection.setReadTimeout(timeout);connection.setDoOutput(true);
             connection.setRequestProperty("Accept","application/json");connection.setRequestProperty("Content-Type",request.contentType);connection.setRequestProperty("User-Agent",WebSessionCookies.userAgent(AGENT));
             if(!request.referer.isEmpty())connection.setRequestProperty("Referer",request.referer);
             if(!request.authorization.isEmpty())connection.setRequestProperty("Authorization",request.authorization);
             String cookies=WebSessionCookies.header(request.url);if(!cookies.isEmpty())connection.setRequestProperty("Cookie",cookies);
             connection.setFixedLengthStreamingMode(request.body.length);try(OutputStream out=connection.getOutputStream()){out.write(request.body);}
-            int status=connection.getResponseCode();WebSessionCookies.receive(request.url,connection.getHeaderFields());JobControl.check();
+            checkDeadline(deadline);int status=connection.getResponseCode();WebSessionCookies.receive(request.url,connection.getHeaderFields());checkDeadline(deadline);
             if(status==401||status==403)throw new IOException("接口拒绝访问（HTTP "+status+"），需要有效授权或正常网页验证");
             if(status>=300&&status<400)throw new IOException("接口返回跳转，未转发授权信息；请填写最终接口地址");
             if(status<200||status>=300)throw new IOException("接口返回 HTTP "+status);
             String text;try(InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
-                byte[] bytes=new byte[8192];int n;while((n=in.read(bytes))!=-1){JobControl.check();if(out.size()+n>1500000)throw new IOException("接口响应过大");out.write(bytes,0,n);}text=out.toString("UTF-8");
+                byte[] bytes=new byte[8192];int n;while((n=in.read(bytes))!=-1){checkDeadline(deadline);if(out.size()+n>1500000)throw new IOException("接口响应过大");out.write(bytes,0,n);}text=out.toString("UTF-8");
             }
+            checkDeadline(deadline);
             if(!text.trim().startsWith("{"))throw new IOException("网站返回网页而非接口结果，可能要求验证");
             return cobalt?cobaltResult(text,share,request.url):tiktokioResult(text,share);
         }finally{connection.disconnect();}
     }
+    private static void checkDeadline(long deadline)throws IOException {
+        JobControl.check();if(System.nanoTime()>=deadline)throw new java.net.SocketTimeoutException("解析接口请求超时，继续网页回退");
+    }
     static LinkExtractor.Result tiktokioResult(String json,String share)throws Exception {
         JSONObject object=new JSONObject(json);if(!object.optBoolean("success")){
             String message=object.optString("error","未返回下载链接").replaceAll("<[^>]*>","").replaceAll("\\s+"," ").trim();
-            throw new IOException("TikTokio："+message.substring(0,Math.min(160,message.length())));
+            throw new IOException("TikTokio 接口拒绝："+message.substring(0,Math.min(160,message.length())));
         }
         LinkExtractor.Result result=result(share,"TikTokio 素材");result.description=object.optString("desc","");JSONObject links=object.optJSONObject("links");
         if(links!=null){Iterator<String> keys=links.keys();while(keys.hasNext()){

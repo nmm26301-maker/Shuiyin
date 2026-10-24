@@ -8,8 +8,8 @@ android {
         applicationId 'com.zizai.watermark'
         minSdk 29
         targetSdk 33
-        versionCode 18
-        versionName '0.6.12'
+        versionCode 19
+        versionName '0.6.13'
         ndk { abiFilters 'arm64-v8a' }
     }
 

@@ -64,6 +64,7 @@ public class MainActivity extends Activity {
     private boolean linkScreen;
     private android.webkit.WebView webPreview;
     private DownloadSites.Site pendingSearchSite;
+    private String pendingSearchPage;
     private java.util.concurrent.atomic.AtomicBoolean jobCancel;
     private java.util.List<Uri> batchFiles=new java.util.ArrayList<>();
     private boolean batchMode;
@@ -297,8 +298,16 @@ public class MainActivity extends Activity {
         if(busy)return;String url=LinkExtractor.extractLink(input);
         if(url.isEmpty()) {toast("请输入有效的 HTTPS 链接");return;}
         extracted=null;incomingLink=url;
-        pendingSearchSite=null;startBusy("四路同时搜索素材…");
-        Button verify=button("网站验证 / 查看失败原因",PANEL);transferView.addView(verify,lp(-1,44));verify.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("停止本次搜索并打开网站").setItems(new String[]{"Cobalt","TikTokio","GreenVideo"},(d,k)->{DownloadSites.Site site=DownloadSites.ALL.get(k);if(busy){pendingSearchSite=site;jobCancel.set(true);}else openWebAssist(site.url,site,url);}).setNegativeButton("继续搜索",null).show());
+        pendingSearchSite=null;pendingSearchPage=null;startBusy("四路同时搜索素材…");
+        java.util.concurrent.atomic.AtomicBoolean searchToken=jobCancel;
+        Button verify=button("原平台 / 网站验证",PANEL);transferView.addView(verify,lp(-1,44));
+        verify.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("停止本次搜索并打开验证页面").setItems(new String[]{"原平台作品 · 播放 / 登录验证","Cobalt","TikTokio","GreenVideo"},(d,k)->{
+            DownloadSites.Site site=k==0?null:DownloadSites.ALL.get(k-1);String page=site==null?url:site.url;
+            if(busy){
+                if(jobCancel!=searchToken){toast("已有新任务正在进行，请从新任务打开验证");return;}
+                pendingSearchSite=site;pendingSearchPage=page;searchToken.set(true);
+            }else openWebAssist(page,site,url);
+        }).setNegativeButton("继续搜索",null).show());
         runJob(()->{
             try {
                 LinkExtractor.Result r=parseCombinedLink(url,images);
@@ -313,12 +322,12 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.12\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.13\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
     private boolean openPendingSearchSite(String url){
-        if(pendingSearchSite==null)return false;DownloadSites.Site site=pendingSearchSite;pendingSearchSite=null;openWebAssist(site.url,site,url);return true;
+        if(pendingSearchPage==null)return false;DownloadSites.Site site=pendingSearchSite;String page=pendingSearchPage;pendingSearchSite=null;pendingSearchPage=null;openWebAssist(page,site,url);return true;
     }
     private LinkExtractor.Result parseCombinedLink(String url,boolean images)throws Exception {
         LinkExtractor.ensurePublic(url);JobControl.check();
@@ -955,7 +964,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.12")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.13")
         .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}

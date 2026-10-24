@@ -1,8 +1,15 @@
-# 水印工坊 0.6.12 · Android
+# 水印工坊 0.6.13 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 18。沿用原工程签名，可以覆盖安装 0.6.11。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 19。沿用原工程签名，可以覆盖安装 0.6.12。
 
-## 本次更新 0.6.12
+## 本次更新 0.6.13
+
+- 搜索进度新增“原平台作品 · 播放 / 登录验证”，可以停止当前搜索后直接打开原作品，而不必等所有网站失败。过期窗口不会取消后来发起的新任务。
+- TikTokio / 已授权 Cobalt 原生请求增加 12 秒总预算与最长 4 秒的单次连接 / 读取超时；响应持续零星到达也会受总预算限制，给既有网页回退留出时间。需要登录或验证时仍在正常页面完成。
+- TikTokio 的具体服务端拒绝原因会保留在诊断里，不再把 `Wrong link format` 隐藏为泛化错误。当前实站字段仍是 multipart `page` + `ajax=1`，并未发现接口字段变更；不能据此宣称服务可用。
+- 本版仍未确认抖音实链下载与三个网站全部可用。相关 HTTP 协议与超时检查使用本地真实响应；原平台验证入口未完成手机 UI 实测。
+
+## 0.6.12 候选预检
 
 - 抖音自动网页提取到直链后，先检查 HTTP 状态、起始范围、已知总大小和最多 64 字节的媒体头，再参与原解析结果竞争，避免网页 / 错误响应地址抢先取消其他解析路径。
 - 分享页与自动网页复用同一个候选预检器：从固定前三个扩展为预算内最多 24 个地址，预检预算为 8 秒，网页路径同时受原有总预算约束。原地址签名、Referer、User-Agent、原作品与封面继续传给原下载流程。
@@ -114,7 +121,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.12.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.13.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 
