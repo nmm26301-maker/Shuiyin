@@ -31,7 +31,7 @@ final class DouyinWebSearch {
     private static final class Session {
         final Activity activity;final String source;final Handler ui=new Handler(Looper.getMainLooper());
         final CountDownLatch done=new CountDownLatch(1);final LinkExtractor.Result result=new LinkExtractor.Result();
-        volatile String page,workSource;volatile boolean closed;WebView view;final Runnable tick=this::poll;
+        volatile String page,workSource;volatile boolean closed;boolean canonicalRequested;WebView view;final Runnable tick=this::poll;
         Session(Activity activity,String source){this.activity=activity;this.source=source;page=source;workSource=source;result.source=source;result.title="抖音网页素材";}
         void start(){
             if(closed||activity.isFinishing()||activity.isDestroyed()){close();return;}
@@ -52,10 +52,17 @@ final class DouyinWebSearch {
                         try{LinkExtractor.ensurePublic(request.getUrl().toString());return null;
                         }catch(Exception e){return new WebResourceResponse("text/plain","UTF-8",new ByteArrayInputStream(new byte[0]));}
                     }
-                    @Override public void onPageFinished(WebView browser,String url){visit(url);if(!closed){ui.removeCallbacks(tick);poll();}}
+                    @Override public void onPageFinished(WebView browser,String url){
+                        visit(url);if(closed)return;
+                        if(!canonicalRequested&&!DouyinParser.id(workSource).isEmpty()){
+                            canonicalRequested=true;String canonical=DouyinParser.browserPage(workSource);
+                            if(!canonical.equals(url)){browser.loadUrl(canonical);return;}
+                        }
+                        ui.removeCallbacks(tick);poll();
+                    }
                     @Override public void onReceivedError(WebView browser,WebResourceRequest request,WebResourceError error){if(request.isForMainFrame())close();}
                 });
-                String share=DouyinParser.sharePage(source);view.loadUrl(share.isEmpty()?source:share);
+                canonicalRequested=!DouyinParser.id(source).isEmpty();view.loadUrl(DouyinParser.browserPage(source));
             }catch(RuntimeException e){close();}
         }
         void visit(String url){workSource=PlaybackRequests.adoptWork(workSource,url);page=url;}

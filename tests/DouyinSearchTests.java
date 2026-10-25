@@ -66,6 +66,20 @@ public final class DouyinSearchTests {
         try{DouyinParser.parseHtml("window._ROUTER_DATA="+snapshot.getString("douyin")+";<script id='RENDER_DATA'>"+state+"</script>",page);throw new AssertionError("private render fallback");}catch(DouyinParser.Restricted expected){check(true,"restricted router state cannot fall through to an alternate render block");}
         snapshot=new JSONObject().put("media",new JSONArray().put(new JSONObject().put("kind","VIDEO").put("url","blob:"+page)).put(new JSONObject().put("kind","IMAGE").put("url","https://cdn.example.org/ad.jpg")));
         check(DouyinBrowserMedia.parse(snapshot,page,page,"UA").items.isEmpty(),"blob and unrelated images not downloadable playback");
+        check(DouyinParser.browserPage("https://www.iesdouyin.com/share/video/"+DouyinParser.id(page)+"/").equals(page),"automatic browser complements mobile HTTP with canonical work page");
+        check(DouyinParser.browserPage("https://v.douyin.com/AbCd/").equals("https://v.douyin.com/AbCd/"),"short link remains intact for normal browser redirect");
+        JSONObject desktop=new JSONObject().put("awemeId",DouyinParser.id(page)).put("desc","desktop")
+            .put("video",new JSONObject().put("playAddr",new JSONArray().put(new JSONObject().put("src",url))));
+        result=DouyinParser.parseState(new JSONObject().put("videoDetail",desktop),page);
+        check(result.count(LinkExtractor.Kind.VIDEO)==1&&result.items.get(0).url.equals(url),"desktop playAddr array retains signed URL");
+        desktop.getJSONObject("video").remove("playAddr");desktop.getJSONObject("video").put("bitRateList",new JSONArray().put(new JSONObject().put("playAddr",new JSONObject().put("urlList",new JSONArray().put(url)))));
+        check(DouyinParser.parseState(new JSONObject().put("videoDetail",desktop),page).count(LinkExtractor.Kind.VIDEO)==1,"desktop bitrate urlList supported");
+        desktop.getJSONObject("video").put("drmType",1);
+        try{DouyinParser.parseState(desktop,page);throw new AssertionError("desktop DRM");}catch(DouyinParser.Restricted expected){checks++;}
+        desktop.getJSONObject("video").remove("drmType");desktop.put("isPrivate",1);
+        try{DouyinParser.parseState(desktop,page);throw new AssertionError("desktop private");}catch(DouyinParser.Restricted expected){checks++;}
+        desktop.remove("isPrivate");desktop.put("awemeId","7312345678901234568");
+        try{DouyinParser.parseState(desktop,page);throw new AssertionError("other desktop work");}catch(IOException expected){checks++;}
         System.out.println("PASS Douyin search: "+checks+" checks");
     }
 }

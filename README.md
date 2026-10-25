@@ -1,8 +1,14 @@
-# 水印工坊 0.6.15 · Android
+# 水印工坊 0.6.16 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 21。沿用原工程签名，可以覆盖安装 0.6.14。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 22。沿用原工程签名，可以覆盖安装 0.6.15。
 
-## 本次更新 0.6.15
+## 本次更新 0.6.16
+
+- 抖音网页采集补齐 `awemeId`、`playAddr[].src`、`playAddr.urlList`、`bitRateList` 和 `__pace_f` 分块页面数据；仍仅提取 URL 指向的作品，排除推荐内容、账号字段、受限及加密视频。
+- 自动网页路线访问标准作品页，与移动分享页 HTTP 路线互补；短链接正常跳转取得作品编号后，仅切换一次标准作品页。
+- 这是已复现的页面结构兼容修复；公开样本仍可能仅返回验证空壳，尚无用户失败链接，不能据此宣称抖音实链下载成功。
+
+## 0.6.15 构建与交付
 
 - GitHub APK 流水线接入搜索回归门禁：编译全部生产 Java，运行 9 个 Java 测试套件和 3 个实际网页采集脚本；任一失败即停止构建和后续交付。测试 / 工具变更也触发验证，依赖按校验和校验并缓存。
 - 新增 JDK 17 + Node 测试入口，无需另找 ECJ：`python3 tooling/test-search.py --deps /path/to/engine-deps --android /path/to/android.jar`。使用仓库内合成视频固定样例，不依赖外部分享链接或本机 FFmpeg。
@@ -135,7 +141,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.15.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.16.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 
