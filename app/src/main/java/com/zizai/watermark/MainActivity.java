@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     private static final int PICK_FILE = 1201, PICK_LOGO=1202, PICK_BATCH=1203, PICK_BATCH_VIDEO=1205;
     private static final int BG = 0xFF0D101C, PANEL = 0xFF202536, WHITE = 0xFFF5F4FF;
     private static final int MUTED = 0xFFBAB8C3, PINK = 0xFF9475F5;
-    private enum Tool { ERASE, IMAGE_WATERMARK, AUDIO, FRAME, GIF, TRIM, MUTE, VIDEO_REMOVE, VIDEO_WATERMARK, COMPRESS, RESIZE, SPEED, MIRROR, MD5 }
+    private enum Tool { ERASE, IMAGE_WATERMARK, AUDIO, FRAME, GIF, TRIM, MUTE, BGM, VIDEO_REMOVE, VIDEO_WATERMARK, COMPRESS, RESIZE, SPEED, MIRROR, MD5 }
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final ExecutorService previews=Executors.newFixedThreadPool(2);
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -186,6 +186,7 @@ public class MainActivity extends Activity {
         addTool(r3,"✦","图片修复",Tool.ERASE); addTool(r3,"✎","图片水印",Tool.IMAGE_WATERMARK);
         toolbox.addView(r1,lp(-1,104)); toolbox.addView(r2,lp(-1,104)); toolbox.addView(r3,lp(-1,104));
         content.addView(toolbox); gap(content,16);
+        Button bgm=button("去 BGM · AI 保留人声",PINK);content.addView(bgm,lp(-1,52));bgm.setOnClickListener(v->choose(Tool.BGM));gap(content,10);
         Button batch=button("批量图片加水印 · 最多 30 张",PANEL);content.addView(batch,lp(-1,48));batch.setOnClickListener(v->chooseBatchImages());gap(content,10);
         Button batchVideo=button("批量视频处理 · 最多 10 个",PANEL);content.addView(batchVideo,lp(-1,48));batchVideo.setOnClickListener(v->chooseBatchVideos());gap(content,10);
         TextView note = text("本地编辑 · 链接提取需要联网",13,MUTED,false);
@@ -322,7 +323,7 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.18\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.19\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
@@ -818,7 +819,7 @@ public class MainActivity extends Activity {
     private String title(Tool t) {
         switch(t) {
             case AUDIO:return "提取音频"; case FRAME:return "视频取帧";case GIF:return "视频转 GIF";
-            case TRIM:return "裁剪时长";case MUTE:return "视频静音";case VIDEO_WATERMARK:return "视频加水印";case COMPRESS:return "视频压缩";case RESIZE:return "裁剪尺寸";case SPEED:return "视频倍速";case VIDEO_REMOVE:return "视频固定区域修复";case MIRROR:return "水平镜像";case MD5:return "修改文件 MD5";default:return "视频工具";
+            case TRIM:return "裁剪时长";case MUTE:return "视频静音";case BGM:return "去 BGM · 保留人声";case VIDEO_WATERMARK:return "视频加水印";case COMPRESS:return "视频压缩";case RESIZE:return "裁剪尺寸";case SPEED:return "视频倍速";case VIDEO_REMOVE:return "视频固定区域修复";case MIRROR:return "水平镜像";case MD5:return "修改文件 MD5";default:return "视频工具";
         }
     }
     private void showVideoTool() {
@@ -872,6 +873,7 @@ public class MainActivity extends Activity {
             case GIF:return "取视频前 8 秒制作 320 像素宽的动态 GIF，约 4 帧/秒。";
             case TRIM:return "在关键帧附近切取片段，不重新编码，适用于常见 MP4 视频。";
             case MUTE:return "移除音轨，保留原视频画面，不重新压缩。";
+            case BGM:return "本机 AI 分离人声和背景音乐，保留原视频画面。支持 3 分钟、1GB 以内视频，使用第一条音轨，处理可能较慢。复杂混音会有音乐残留或人声失真，也可能保留歌曲演唱；不保证保留环境音。";
             case VIDEO_WATERMARK:return "水印叠加到每一帧。输出 H.264 MP4，长边最多 1920，最高 30 帧/秒。";
             case COMPRESS:return "重新编码为 H.264 MP4。压缩结果取决于原视频码率，不保证比原文件更小。";
             case MIRROR:return "水平翻转画面，导出 H.264 MP4。长边最多 1920，最高 30 帧/秒。";
@@ -936,6 +938,7 @@ public class MainActivity extends Activity {
     }
     private Uri processSingleVideo(Tool action,Uri input,VideoTranscoder.Options options,float[][] region,long startUs,long endUs,String prefix)throws Exception {
         if(action==Tool.AUDIO)return extractLocalAudio(input,prefix);
+        if(action==Tool.BGM)return AudioBgm.export(this,input,message->updateProgress(prefix+message));
         if(action==Tool.MUTE)return MediaOps.saveRemux(this,input,false,true,0,0);
         if(action==Tool.TRIM)return MediaOps.saveRemux(this,input,false,false,startUs,endUs);
         if(action==Tool.FRAME){Bitmap bitmap=MediaOps.frame(this,input,startUs);try{return MediaOps.saveBitmap(this,bitmap,"frame_"+System.currentTimeMillis()+".png");}finally{bitmap.recycle();}}
@@ -966,8 +969,8 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.18")
-        .setMessage("照片与视频在本机处理。多路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo、IdeaFlow、酷酷工具与 Twitter Video Downloader；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.19")
+        .setMessage("照片与视频在本机处理。多路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo、IdeaFlow、酷酷工具与 Twitter Video Downloader；配置专用服务后也会向该服务发送链接。\n\n内置 Spleeter 人声分离模型与 ONNX Runtime，支持 3 分钟以内视频去 BGM，可能有残留或人声失真。模型及许可证随包提供。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
     private void showFiles(){

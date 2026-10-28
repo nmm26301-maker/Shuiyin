@@ -79,6 +79,7 @@ def main():
             run('node', ROOT / 'tests' / script, source)
     run('node', ROOT / 'tests/download-site-form-tests.js', build / 'site-form.js')
     run('python3', ROOT / 'tests/native-format-tests.py', ROOT / 'app/src/main/res/raw/ytdlp', build / 'native-formats.json')
+    run('python3', ROOT / 'tooling/test-bgm.py', '--deps', deps)
     run('python3', ROOT / 'tests/test-release.py')
     print('PASS search regression gate: 11 Java suites, 4 actual JavaScript collectors and release guards', flush=True)
 

@@ -10,3 +10,7 @@ build-offline/
 
 build-search/
 .cache/
+
+app/src/main/assets/bgm/*.onnx
+
+__pycache__/

@@ -31,8 +31,16 @@ jobs:
           node-version: '20'
       - uses: actions/cache@v4
         with:
-          path: .cache/engine-deps
-          key: search-deps-${{ runner.os }}-${{ hashFiles('tooling/engine-lock.json', 'tooling/test-search.py') }}
+          path: |
+            .cache/engine-deps
+            .cache/bgm
+          key: search-deps-${{ runner.os }}-${{ hashFiles('tooling/engine-lock.json', 'tooling/test-search.py', 'tooling/bgm-lock.json', 'tooling/test-bgm.py') }}
+      - name: Install audio test dependency
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
       - name: Search regression gate
         run: python3 tooling/test-search.py --deps .cache/engine-deps --android "$ANDROID_HOME/platforms/android-35/android.jar"
       - uses: gradle/actions/setup-gradle@v4

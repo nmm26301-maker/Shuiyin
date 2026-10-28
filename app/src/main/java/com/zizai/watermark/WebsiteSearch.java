@@ -17,9 +17,9 @@ final class WebsiteSearch {
         long started=System.nanoTime();JobControl.check();DownloadSites.Site site=DownloadSites.SEARCH.get(index);String apiError=index==0?"未配置授权 Cobalt API，当前使用网页辅助":"";
         android.content.SharedPreferences prefs=activity.getSharedPreferences("link_settings",0);
         try{
-            if(site.url.equals("https://parse.ideaflow.top/"))return ProviderHttp.ideaFlow(source);
-            if(index==1)return ProviderHttp.tiktokio(source);
-            if(index==0&&!prefs.getString("cobalt_endpoint","").isEmpty())return ProviderHttp.cobalt(source,prefs.getString("cobalt_endpoint",""),prefs.getString("cobalt_key",""));
+            if(site.url.equals("https://parse.ideaflow.top/"))return LinkExtractor.verifyWebsiteCandidates(activity,ProviderHttp.ideaFlow(source),8000);
+            if(index==1)return LinkExtractor.verifyWebsiteCandidates(activity,ProviderHttp.tiktokio(source),8000);
+            if(index==0&&!prefs.getString("cobalt_endpoint","").isEmpty())return LinkExtractor.verifyWebsiteCandidates(activity,ProviderHttp.cobalt(source,prefs.getString("cobalt_endpoint",""),prefs.getString("cobalt_key","")),8000);
         }catch(Exception error){JobControl.check();apiError=error.getMessage()==null?"接口请求失败":error.getMessage();}
         JobControl.check();
         String script;try(InputStream in=activity.getResources().openRawResource(R.raw.search_sites);ByteArrayOutputStream out=new ByteArrayOutputStream()){
@@ -31,7 +31,8 @@ final class WebsiteSearch {
         try{
             long deadline=started+TimeUnit.SECONDS.toNanos(38);
             while(!session.latch.await(150,TimeUnit.MILLISECONDS)){JobControl.check();if(System.nanoTime()>deadline)break;}
-            JobControl.check();synchronized(session.result){if(!session.result.items.isEmpty()){LinkExtractor.Result copy=new LinkExtractor.Result();copy.source=session.result.source;copy.title=session.result.title;copy.description=session.result.description;for(LinkExtractor.Item item:session.result.items)copy.addItem(item);return copy;}}
+            JobControl.check();LinkExtractor.Result copy=null;synchronized(session.result){if(!session.result.items.isEmpty()){copy=new LinkExtractor.Result();copy.source=session.result.source;copy.title=session.result.title;copy.description=session.result.description;for(LinkExtractor.Item item:session.result.items)copy.addItem(item);}}
+            if(copy!=null){session.ui.post(session::close);long left=Math.max(0,Math.min(8000,TimeUnit.NANOSECONDS.toMillis(started+TimeUnit.SECONDS.toNanos(44)-System.nanoTime())));return LinkExtractor.verifyWebsiteCandidates(activity,copy,left);}
             throw new IOException((apiError.isEmpty()?"":apiError+"；")+(session.error.isEmpty()?"网页未返回素材，可用网站验证后重试":session.error));
         }finally{session.ui.post(session::close);}
     }

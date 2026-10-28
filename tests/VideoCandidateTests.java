@@ -32,7 +32,7 @@ public final class VideoCandidateTests {
             server.createContext("/",exchange->{try{
                 String path=exchange.getRequestURI().getPath();queries.add(String.valueOf(exchange.getRequestURI().getRawQuery()));
                 byte[] body=Arrays.copyOf(mp4,64);int status=206;String range="bytes 0-63/"+mp4.length;
-                if(path.equals("/html")){body="<html>verification required</html>".getBytes();status=200;}
+                if(path.equals("/html")||path.equals("/fake.m3u8")){body="<html>verification required</html>".getBytes();status=200;}
                 if(path.equals("/json")){body="{\"error\":\"invalid video\"}".getBytes();status=200;}
                 if(path.equals("/403")){status=403;body="denied".getBytes();}
                 if(path.equals("/404")){status=404;body="missing".getBytes();}
@@ -105,6 +105,12 @@ public final class VideoCandidateTests {
                 new ParallelSearch.Source("bad browser",()->{try{return VideoCandidates.select(result("html"),wire::open,1000);}finally{rejected.countDown();}}),
                 new ParallelSearch.Source("valid fallback",()->{if(!rejected.await(2,TimeUnit.SECONDS))throw new IOException("missing probe");return result("ok");})),2000);
             check(winner.items.get(0).url.endsWith("/ok"),"HTML response cannot win the original parse race and cancel a working fallback");
+            LinkExtractor.Result multiple=result("html");multiple.add(LinkExtractor.Kind.VIDEO,"https://cdn.example.org/ok","valid one");multiple.add(LinkExtractor.Kind.VIDEO,"https://cdn.example.org/full","valid two");
+            LinkExtractor.Result checked=VideoCandidates.verifyAll(multiple,wire::open,3000);
+            check(checked.count(LinkExtractor.Kind.VIDEO)==2&&checked.items.stream().noneMatch(i->i.url.endsWith("html")),"website preflight removes HTML and preserves multiple real videos");
+            check(checked.notice.contains("已过滤 1"),"discarded candidates explained");
+            try{VideoCandidates.verifyAll(result("html"),wire::open,1000);throw new AssertionError("website HTML accepted");}catch(IOException expected){check(expected.getMessage().contains("媒体预检"),"HTML-only website response cannot count as parsed media");}
+            try{VideoCandidates.verifyAll(result("fake.m3u8"),wire::open,1000);throw new AssertionError("HTML playlist accepted");}catch(IOException expected){check(true,"playlist extension alone cannot bypass website media validation");}
             LinkExtractor.Result images=new LinkExtractor.Result();images.add(LinkExtractor.Kind.IMAGE,"https://cdn.example.org/photo.jpg","照片");before=wire.opened.size();
             check(VideoCandidates.select(images,wire::open,1000)==images&&wire.opened.size()==before,"photo work never becomes a failed video probe");
             LinkExtractor.Result nativeResult=new LinkExtractor.Result();nativeResult.addEngine(LinkExtractor.Kind.VIDEO,candidates.source,"native",0);

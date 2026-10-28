@@ -52,6 +52,11 @@ function fixture(host='tiktokio.bio',resume=false){
   f=fixture('twittervideodownloader.com',true);f.state.anchors=[new f.HTMLAnchorElement('https://video.twimg.com/clip.mp4?tag=12','Download Video')];r=f.poll();
   check(r.items.length===1&&r.items[0].url.includes('tag=12'),'full-page POST navigation resumes collection on result page');
   check(f.state.submitted===0,'result page never submits another form');
+  f=fixture('twittervideodownloader.com',true);f.state.anchors=[new f.HTMLAnchorElement('https://twittervideodownloader.com/en/','Twitter Video Downloader'),new f.HTMLAnchorElement('https://twittervideodownloader.com/download?tweet=123','Download Video')];r=f.poll();
+  check(r.items.length===0,'regression: navigation/footer and HTML result pages are not video candidates');
+  f.state.anchors.push(new f.HTMLAnchorElement('https://video.twimg.com/valid.mp4?sig=a%2Fb','Download Video'));r=f.poll();check(r.items.length===1&&r.items[0].url.includes('video.twimg.com'),'real CDN video survives navigation filtering');
+  f=fixture('twittervideodownloader.com',true);let pageLink=new f.HTMLAnchorElement('https://twittervideodownloader.com/download?tweet=123','Download Video');pageLink.click();r=f.poll();
+  check(r.items.length===0&&f.state.originalClick,'HTML intermediary click navigates normally instead of becoming fake media');
   if(process.argv[3])for(const site of JSON.parse(fs.readFileSync(process.argv[3],'utf8'))){
     f=fixture(new URL(site.url).hostname);Object.assign(f.config,site);f.poll();check(f.state.submitted===1,'production form config submits '+site.url);
   }

@@ -73,5 +73,12 @@
     "url": "https://repo.maven.apache.org/maven2/org/apache/commons/commons-compress/1.12/commons-compress-1.12.jar",
     "sha256": "2c1542faf343185b7cab9c3d55c8ae5471d6d095d3887a4adefdbdf2984dc0b6",
     "type": "jar"
+  },
+  {
+    "name": "onnxruntime-android-1.24.3.aar",
+    "url": "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.24.3/onnxruntime-android-1.24.3.aar",
+    "sha256": "67397e4a970e75617f765d2015ceaf911917e1d822276cfb5792744e8085cbce",
+    "type": "aar",
+    "jar": "onnxruntime.jar"
   }
 ]

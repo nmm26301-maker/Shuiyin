@@ -1,8 +1,16 @@
-# 水印工坊 0.6.18 · Android
+# 水印工坊 0.6.19 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 24。沿用原工程签名，可以覆盖安装 0.6.17。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 25。沿用原工程签名，可以覆盖安装 0.6.18。
 
-## 本次更新 0.6.18
+## 本次更新 0.6.19
+
+- 修复网站结果页把 “Twitter Video Downloader / Download Video” 导航、页脚和 HTML 中转页当作视频的漏洞。普通同站网页链接不再成为媒体；需要正常跳转的下载按钮继续交给网站处理。各网站返回的视频候选现在用真实响应做有界预检，过滤 HTML / JSON、错误签名及伪造清单，同时保留多个通过检查的视频。
+- 新增首页「去 BGM · AI 保留人声」：Spleeter 两路模型 + ONNX Runtime 完全在手机运行，模型随 APK 提供，无 API Key，无运行时模型下载，不上传视频。读取第一条音轨，分段处理 3 分钟、1GB 以内视频，输出人声版 MP4；原视频流直接复用，原文件保留。
+- 模型与依赖固定 SHA-256；首次使用从安装包校验并准备模型。合成语音 + 合成背景和弦的实际模型测试已通过：检测到背景分量降低，音视频轨道、时长及原视频数据检查通过。实际手机速度和任意混音效果尚未验证，可能有音乐残留、人声失真，也可能保留歌曲演唱或丢失环境音；这不是静音按钮。
+- 本次修复已复现与截图相符的误识别问题。用户原分享链接尚未提供，不能宣称该具体视频或所有网站均恢复下载。两个微信电脑项目及其他历史未完成项仍未移植。
+- 开发签名保持不变，可覆盖 0.6.18。APK 因内置模型和推理库而增大。构建会准备固定模型并运行真实 ONNX / FFmpeg 回归；离线构建同样包含模型资源与原始许可证。
+
+## 0.6.18 本机能力适配
 
 - 按手机本机优先适配 4 项能力入口：res-downloader 对应网页素材捕获；Youwee / VidBee 对应共用 yt-dlp 的手机通用下载；Telegram 对应公开帖子图片与视频保存。完整桌面程序和 Telegram 用户脚本没有移植，也未将同一引擎冒充成多个独立解析接口。
 - 新增本机下载工作台，可选择平台引擎源画质、1080p、720p、480p、360p 上限，解析预览或加入保存队列；清晰度约束覆盖全部回退格式。原始 HTTPS 直链保持其格式，音频保存复用原队列提取功能。
@@ -156,7 +164,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.18.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.19.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

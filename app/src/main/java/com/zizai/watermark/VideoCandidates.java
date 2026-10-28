@@ -26,7 +26,21 @@ final class VideoCandidates {
                 return result;
             }catch(Exception error){JobControl.check();last=error;}
         }
-        throw new IOException("已找到抖音视频候选，但直链预检未通过："+(last==null?"预检超时":ExtractionErrors.message(last)),last);
+        throw new IOException("已找到视频候选，但直链预检未通过："+(last==null?"预检超时":ExtractionErrors.message(last)),last);
+    }
+    static LinkExtractor.Result verifyAll(LinkExtractor.Result candidates,Opener opener,long budgetMs)throws Exception {
+        JobControl.check();long deadline=System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(budgetMs);
+        LinkExtractor.Result result=new LinkExtractor.Result();result.source=candidates.source;result.title=candidates.title;result.description=candidates.description;result.notice=candidates.notice;
+        Exception last=null;int rejected=0;
+        for(LinkExtractor.Item item:candidates.items){
+            if(item.kind!=LinkExtractor.Kind.VIDEO){result.addItem(item);continue;}
+            try{JobControl.check();if(System.nanoTime()>=deadline)throw new IOException("视频预检超时");
+                if(!item.engine)probe(item,opener,deadline);result.addItem(item);
+            }catch(Exception error){JobControl.check();last=error;rejected++;}
+        }
+        if(result.items.isEmpty()&&rejected>0)throw new IOException("网站候选未通过媒体预检，可能返回网页或地址已过期",last);
+        if(rejected>0)result.notice=(result.notice.isEmpty()?"":result.notice+"\n")+"已过滤 "+rejected+" 个无效视频候选";
+        return result;
     }
     private static void probe(LinkExtractor.Item item,Opener opener,long deadline)throws Exception {
         HttpURLConnection connection=null;
@@ -44,13 +58,17 @@ final class VideoCandidates {
             }
             if(total==0||total>MediaLimits.DOWNLOAD)throw new IOException("视频候选为空或超过 2GB 上限");
             String mime=connection.getContentType();mime=mime==null?"":mime.toLowerCase(Locale.ROOT);
-            if(mime.contains("mpegurl")||mime.contains("dash+xml"))return; // Existing downloader inspects MIME and hands these to the engine.
-            if(mime.startsWith("text/")||mime.contains("json"))throw new IOException("视频候选返回网页或错误响应");
+            boolean manifest=mime.contains("mpegurl")||mime.contains("dash+xml")||LinkExtractor.segmented(item.url);
+            if(mime.contains("html")||mime.contains("json")||mime.startsWith("text/")&&!manifest)throw new IOException("视频候选返回网页或错误响应");
             byte[] bytes=new byte[64];int count=0;
             try(InputStream in=connection.getInputStream()){
                 while(count<bytes.length){JobControl.check();if(System.nanoTime()>=deadline)throw new IOException("视频预检超时");int n=in.read(bytes,count,bytes.length-count);if(n<0)break;count+=n;}
             }
             if(System.nanoTime()>=deadline)throw new IOException("视频预检超时");
+            if(manifest){String prefix=new String(bytes,0,count,java.nio.charset.StandardCharsets.UTF_8).replace("\uFEFF","").trim();
+                if(prefix.startsWith("#EXTM3U")||prefix.contains("<MPD"))return;
+                throw new IOException("视频清单地址未返回有效清单");
+            }
             if(count<12||!MediaSignature.accepts("video/mp4",bytes,count))throw new IOException("视频候选未返回媒体文件");
         }finally{if(connection!=null)connection.disconnect();}
     }

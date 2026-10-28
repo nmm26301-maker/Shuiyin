@@ -18,6 +18,10 @@
   function links(doc){doc.querySelectorAll('a[href]').forEach(a=>{
     var label=(a.textContent||'')+' '+(a.getAttribute('type')||''),download=a.hasAttribute('download');
     if(!download&&!/download|下载|无水印|MP4|MP3/i.test(label))return;
+    // Navigation/footer labels such as 'Video Downloader' are not evidence of media.
+    try{var target=new URL(a.href,location.href),page=new URL(location.href);
+      if(target.origin===page.origin&&!/\.(mp4|m4v|mov|webm|m3u8|mpd|mp3|m4a|aac|ogg|wav|jpe?g|png|webp|gif|avif)$/i.test(target.pathname))return;
+    }catch(e){return;}
     var type=kind(a.href,label);if(!type&&download)type=kind(a.href,a.getAttribute('download'));
     add(a.href,type,label);
   });}
@@ -58,6 +62,9 @@
   if(window.HTMLAnchorElement){var click=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){
     if(submitted&&(this.hasAttribute('download')||/download|下载|mp4|mp3/i.test(this.textContent||''))){
       if(String(this.href).startsWith('blob:')){error='该网站使用 blob 下载，未返回可复用的媒体直链';return;}
+      try{var target=new URL(this.href,location.href),page=new URL(location.href);
+        if(target.origin===page.origin&&!/\.(mp4|m4v|mov|webm|m3u8|mpd|mp3|m4a|aac|ogg|wav|jpe?g|png|webp|gif|avif)$/i.test(target.pathname))return click.apply(this,arguments);
+      }catch(e){return click.apply(this,arguments);}
       add(this.href,kind(this.href,this.getAttribute('download')||this.textContent),'网站下载');return;
     }return click.apply(this,arguments);
   };}

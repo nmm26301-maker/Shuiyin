@@ -3,9 +3,9 @@
 Example: python3 tooling/build-offline.py --sdk /path/to/sdk --ecj /path/to/ecj.jar
 """
 import argparse,pathlib,subprocess,shutil,zipfile,os,json,hashlib,uuid
-p=argparse.ArgumentParser();p.add_argument('--sdk',default=os.getenv('ANDROID_HOME'));p.add_argument('--ecj');p.add_argument('--deps',required=True,help='Verified prepare-engine.py cache');p.add_argument('--output',default='build-offline/WatermarkWorkshop-0.6.18.apk');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--sdk',default=os.getenv('ANDROID_HOME'));p.add_argument('--ecj');p.add_argument('--deps',required=True,help='Verified prepare-engine.py cache');p.add_argument('--output',default='build-offline/WatermarkWorkshop-0.6.19.apk');a=p.parse_args()
 if not a.sdk:p.error('--sdk or ANDROID_HOME is required')
-root=pathlib.Path(__file__).resolve().parents[1];sdk=pathlib.Path(a.sdk).resolve();bt=sdk/'build-tools/35.0.0';android=sdk/'platforms/android-35/android.jar';build=root/'build-offline';build.mkdir(exist_ok=True)
+root=pathlib.Path(__file__).resolve().parents[1];subprocess.run(['python3',str(root/'tooling/prepare-bgm.py')],check=True);sdk=pathlib.Path(a.sdk).resolve();bt=sdk/'build-tools/35.0.0';android=sdk/'platforms/android-35/android.jar';build=root/'build-offline';build.mkdir(exist_ok=True)
 gallery=json.loads((root/'tooling/gallery-bundle.json').read_text())
 if hashlib.sha256((root/'app/src/main/res/raw/gallery_bundle').read_bytes()).hexdigest()!=gallery['sha256'] or gallery['sha256'] not in (root/'app/src/main/java/com/zizai/watermark/GalleryEngine.java').read_text():raise SystemExit('Gallery bundle checksum does not match installer; run gallery tests after rebuilding it')
 deps=pathlib.Path(a.deps).resolve();items=json.loads((root/'tooling/engine-lock.json').read_text());jars=[]
@@ -21,7 +21,7 @@ def run(*cmd):subprocess.run([str(x) for x in cmd],check=True,cwd=root)
 manifest=(root/'app/src/main/AndroidManifest.xml').read_text().replace('<manifest xmlns:', '<manifest package="com.zizai.watermark" xmlns:').replace('<application','<application android:debuggable="true"',1)
 (build/'AndroidManifest.xml').write_text(manifest)
 run(bt/'aapt2','compile','--dir',root/'app/src/main/res','-o',build/'resources.zip')
-run(bt/'aapt2','link','-o',build/'resources.apk','--manifest',build/'AndroidManifest.xml','-I',android,build/'resources.zip','--min-sdk-version','29','--target-sdk-version','33','--version-code','24','--version-name','0.6.18','--java',build/'generated','--extra-packages','com.yausername.youtubedl_android')
+run(bt/'aapt2','link','-o',build/'resources.apk','--manifest',build/'AndroidManifest.xml','-I',android,build/'resources.zip','--min-sdk-version','29','--target-sdk-version','33','--version-code','25','--version-name','0.6.19','--java',build/'generated','--extra-packages','com.yausername.youtubedl_android')
 sources=sorted((root/'app/src/main/java').rglob('*.java'))+sorted((build/'generated').rglob('*.java'))
 if a.ecj:
  # The Android platform jar contains Java platform stubs. Use the JRE module
@@ -40,6 +40,8 @@ run('java','-cp',bt/'lib/d8.jar','com.android.tools.r8.D8','--min-api','29','--l
 shutil.copy2(build/'resources.apk',build/'unsigned.apk')
 with zipfile.ZipFile(build/'unsigned.apk','a',compression=zipfile.ZIP_DEFLATED) as apk:
  for dex in (build/'dex').glob('*.dex'):apk.write(dex,dex.name)
+ for asset in (root/'app/src/main/assets').rglob('*'):
+  if asset.is_file():apk.write(asset,'assets/'+asset.relative_to(root/'app/src/main/assets').as_posix())
  for item in items:
   if item['type']=='aar':
    with zipfile.ZipFile(deps/item['name']) as archive:

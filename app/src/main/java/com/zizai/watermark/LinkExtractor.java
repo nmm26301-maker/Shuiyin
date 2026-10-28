@@ -176,6 +176,10 @@ public final class LinkExtractor {
         java.io.File cookies=new java.io.File(context.getFilesDir(),"link-cookies.txt");
         return VideoCandidates.select(candidates,(item,deadline)->open(item.url,item.referer,cookies,"bytes=0-63","",item.userAgent,deadline),budgetMs);
     }
+    static Result verifyWebsiteCandidates(Context context,Result candidates,long budgetMs)throws Exception {
+        java.io.File cookies=new java.io.File(context.getFilesDir(),"link-cookies.txt");
+        return VideoCandidates.verifyAll(candidates,(item,deadline)->open(item.url,item.referer,cookies,"bytes=0-63","",item.userAgent,deadline),budgetMs);
+    }
     /** Optional self-hosted platform engine. Links are sent only to the configured endpoint. */
     public static Result parsePlatform(String share,String endpoint)throws Exception {
         ensurePublic(endpoint);JobControl.check();
