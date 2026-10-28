@@ -322,7 +322,7 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.17\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.18\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
@@ -356,6 +356,7 @@ public class MainActivity extends Activity {
         return MediaSearchRace.run(attempts,37000);
     }
     private LinkExtractor.Result parseLocalLink(String url,boolean images)throws Exception {
+        if(TelegramPost.matches(url))return LinkExtractor.parseTelegram(this,url);
         if(DouyinParser.matches(url))return parseDouyinLink(url,"");
         if(PlatformRoutes.shortLink(url)){
             updateProgress("正在展开 "+PlatformRoutes.name(url)+" 分享链接…");
@@ -965,7 +966,7 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.17")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.18")
         .setMessage("照片与视频在本机处理。多路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo、IdeaFlow、酷酷工具与 Twitter Video Downloader；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
@@ -1005,6 +1006,10 @@ public class MainActivity extends Activity {
     private void openFile(Uri uri){try{Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,getContentResolver().getType(uri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);}catch(Exception e){toast("文件无法打开，请检查系统相册或选择支持该格式的播放器");}}
     private void shareFile(Uri uri,String mime){try{Intent i=new Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);i.setClipData(android.content.ClipData.newRawUri("作品",uri));startActivity(Intent.createChooser(i,"分享作品"));}catch(Exception e){toast("无法分享此文件");}}
     private boolean handleSharedIntent(Intent intent){
+        if(Intent.ACTION_VIEW.equals(intent.getAction())&&intent.getData()!=null){
+            try{NativeSourceTools.Request request=NativeSourceTools.youwee(intent.getData().toString());incomingLink=request.url;showNativeDownloader("Youwee 链接请求 · 确认后解析或入队",request.url,request.height,request.audio,"https://github.com/vanloctech/youwee");}
+            catch(Exception e){toast("无法导入下载请求："+e.getMessage());showLinkExtract();}return true;
+        }
         if(!Intent.ACTION_SEND.equals(intent.getAction()))return false;
         String sharedText=intent.getStringExtra(Intent.EXTRA_TEXT);
         if(sharedText!=null&&!LinkExtractor.extractLink(sharedText).isEmpty()){incomingLink=sharedText;extracted=null;try{if(LinkExtractor.extractLinks(sharedText).size()>1){queueDraft=sharedText;showLinkQueue();return true;}}catch(Exception ignored){}showLinkExtract();return true;}
@@ -1118,7 +1123,7 @@ public class MainActivity extends Activity {
     }
     private void showDownloadSites(){
         if(busy)return;stopVideoPreview();stopWebPreview();linkScreen=true;initRoot();header("搜索下载入口",false);LinearLayout box=scrollBody();
-        box.addView(text("6 个网站可搜索并统一下载；6 项电脑软件 / 浏览器脚本可打开官方项目查看安装说明。",14,MUTED,false),lp(-1,-2));gap(box,10);
+        box.addView(text("6 个网站参与搜索；开源工具入口提供本机功能适配。微信电脑工具的原生移植尚未完成。",14,MUTED,false),lp(-1,-2));gap(box,10);
         EditText source=new EditText(this);source.setTextColor(WHITE);source.setHintTextColor(MUTED);source.setHint("分享链接（可选）");source.setSingleLine(true);source.setText(incomingLink);box.addView(source,lp(-1,52));
         EditText search=new EditText(this);search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("搜索工具 / 视频号 / YouTube / Telegram");search.setSingleLine(true);box.addView(search,lp(-1,52));
         LinearLayout rows=vertical();box.addView(rows,lp(-1,-2));
@@ -1133,13 +1138,61 @@ public class MainActivity extends Activity {
             LinearLayout card=vertical();pad(card,14,12,14,12);card.setBackground(round(PANEL,14));
             card.addView(text(site.name+(site.searchable?" · 在线解析":" · 开源工具")+(site==recommended?" · 对应平台入口":""),17,WHITE,true),lp(-1,-2));
             card.addView(text(site.url+"\n"+site.detail,12,MUTED,false),lp(-1,-2));
-            Button open=button(site.searchable?"打开解析并下载":"打开官方项目 / 安装说明",0xFF6650BA);card.addView(open,lp(-1,48));open.setOnClickListener(v->openDownloadSite(site));rows.addView(card,lp(-1,-2));gap(rows,10);
+            Button open=button(site.searchable?"打开解析并下载":NativeSourceTools.mode(site.url)==NativeSourceTools.Mode.UNAVAILABLE?"查看移植状态":"使用本机功能",0xFF6650BA);card.addView(open,lp(-1,48));open.setOnClickListener(v->openDownloadSite(site));rows.addView(card,lp(-1,-2));gap(rows,10);
         }return count;
     }
     private void openDownloadSite(DownloadSites.Site site){
         if(busy)return;
-        if(!site.searchable){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(site.url)));}catch(Exception e){toast("未找到浏览器，请复制项目网址");copyDownloadSource(site.url);}return;}
+        if(!site.searchable){showNativeSource(site);return;}
         openWebAssist(site.url,site,incomingLink);
+    }
+    private void showNativeSource(DownloadSites.Site site){
+        NativeSourceTools.Mode mode=NativeSourceTools.mode(site.url);
+        if(mode==NativeSourceTools.Mode.UNAVAILABLE){
+            String reason=site.url.contains("qiye45")?"该仓库未提供可移植的应用源码，尚不能制作安卓本机版。":"该项目依赖电脑微信的代理及客户端会话，尚未完成安卓原生移植。";
+            new AlertDialog.Builder(this).setTitle(site.name).setMessage(reason).setPositiveButton("查看官方说明",(d,w)->openProjectSource(site.url)).setNegativeButton("关闭",null).show();return;
+        }
+        if(mode==NativeSourceTools.Mode.WEB_CAPTURE){
+            EditText input=new EditText(this);input.setSingleLine(true);input.setHint("HTTPS 网页或媒体链接");input.setText(incomingLink);
+            new AlertDialog.Builder(this).setTitle("本机网页素材捕获").setMessage("打开页面并播放或点击下载；发现的 HTTPS 媒体统一保存。系统其他应用的流量暂不支持捕获。")
+                .setView(input).setPositiveButton("打开并捕获",(d,w)->{String url=LinkExtractor.extractLink(input.getText().toString());if(url.isEmpty()){toast("请输入 HTTPS 链接");return;}incomingLink=url;openWebAssist(url);})
+                .setNeutralButton("源码",(d,w)->openProjectSource(site.url)).setNegativeButton("取消",null).show();return;
+        }
+        showNativeDownloader(mode==NativeSourceTools.Mode.TELEGRAM?"Telegram 公开帖子":site.name,incomingLink,0,false,site.url);
+    }
+    private void openProjectSource(String url){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){copyDownloadSource(url);}}
+    private void showNativeDownloader(String title,String source,int requestedHeight,boolean audio,String project){
+        if(busy){toast("当前任务运行中，请完成后打开本机下载");return;}
+        stopWebPreview();stopVideoPreview();linkScreen=true;initRoot();header("本机通用下载",false);LinearLayout box=scrollBody();
+        boolean telegram=project.contains("Telegram-Media-Downloader");
+        box.addView(text(title,18,WHITE,true),lp(-1,-2));gap(box,8);
+        box.addView(text(telegram?"支持公开频道具体帖子的图片和视频；私有频道、邀请链接及浏览器用户脚本尚未移植。":"复用 Youwee、VidBee 同样使用的 yt-dlp 下载能力，直接在手机解析与保存；其完整桌面程序尚未移植。",13,MUTED,false),lp(-1,-2));gap(box,12);
+        EditText input=new EditText(this);input.setSingleLine(true);input.setTextColor(WHITE);input.setHintTextColor(MUTED);input.setHint(telegram?"https://t.me/频道名/帖子编号":"粘贴 HTTPS 分享链接");input.setText(source);box.addView(input,lp(-1,56));
+        android.widget.Spinner quality=selector(box,"平台引擎清晰度上限（直链保持原格式）",new String[]{"源画质","1080p","720p","480p","360p"});
+        int current=requestedHeight>0?requestedHeight:getSharedPreferences("download_options",0).getInt("height",0);for(int i=0;i<NativeSourceTools.HEIGHTS.length;i++)if(NativeSourceTools.HEIGHTS[i]==current)quality.setSelection(i);
+        android.widget.Spinner mode=selector(box,"保存内容",new String[]{"视频 / 图片","只保存音频"});mode.setSelection(audio?1:0);
+        Button parse=button("解析素材",PINK);box.addView(parse,lp(-1,52));
+        parse.setOnClickListener(v->{try{String url=NativeSourceTools.normalize(LinkExtractor.extractLink(input.getText().toString()));if(telegram)url=TelegramPost.page(url);incomingLink=url;
+            getSharedPreferences("download_options",0).edit().putInt("height",NativeSourceTools.HEIGHTS[quality.getSelectedItemPosition()]).apply();
+            parseNativeLink(url,mode.getSelectedItemPosition()==1);
+        }catch(Exception e){toast(e.getMessage());}});
+        Button queue=button("添加保存队列",0xFF6650BA);box.addView(queue,lp(-1,48));
+        queue.setOnClickListener(v->{try{String url=NativeSourceTools.normalize(LinkExtractor.extractLink(input.getText().toString()));if(telegram)url=TelegramPost.page(url);
+            getSharedPreferences("download_options",0).edit().putInt("height",NativeSourceTools.HEIGHTS[quality.getSelectedItemPosition()]).apply();
+            LinkSaveQueue q=LinkQueueStore.read(this);q.add(java.util.Collections.singletonList(url),mode.getSelectedItemPosition()==1?LinkSaveQueue.Mode.AUDIO:LinkSaveQueue.Mode.MEDIA);LinkQueueStore.save(this,q);showLinkQueue();
+        }catch(Exception e){toast(e.getMessage());}});
+        Button docs=button("查看项目源码",PANEL);box.addView(docs,lp(-1,48));docs.setOnClickListener(v->openProjectSource(project));
+    }
+    private void parseNativeLink(String url,boolean audio){
+        startBusy("本机引擎正在解析…");runJob(()->{try{
+            LinkExtractor.ensurePublic(url);LinkExtractor.Result result;
+            if(TelegramPost.matches(url))result=LinkExtractor.parseTelegram(this,url);else result=PlatformEngine.parse(this,url,this::updateProgress);
+            if(audio){LinkExtractor.Result selected=new LinkExtractor.Result();selected.source=result.source;selected.title=result.title;selected.description=result.description;
+                for(LinkExtractor.Item item:result.items)if(item.kind==LinkExtractor.Kind.AUDIO)selected.addItem(item);
+                if(selected.items.isEmpty())throw new java.io.IOException("未返回独立音频，可添加音频保存队列从视频提取");result=selected;
+            }
+            LinkExtractor.Result found=result;mainHandler.post(()->{stopBusy();if(cancelled())return;extracted=found;saveLinkRecord(url,found.title);showLinkExtract();});
+        }catch(Exception error){mainHandler.post(()->{stopBusy();if(!cancelled())new AlertDialog.Builder(this).setTitle("本机解析未完成").setMessage(ExtractionErrors.message(error)).setPositiveButton("关闭",null).show();});}});
     }
     private void copyDownloadSource(String source){
         android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
@@ -1242,8 +1295,9 @@ public class MainActivity extends Activity {
             tools.addView(fill,new LinearLayout.LayoutParams(0,dp(44),1));tools.addView(external,new LinearLayout.LayoutParams(0,dp(44),1));root.addView(tools,root.indexOfChild(view));
             fill.setOnClickListener(v->{if(source.isEmpty()){toast("请返回下载入口先粘贴分享链接");return;}if(!site.owns(view.getUrl())){toast("请回到原下载网站后填入链接");return;}view.evaluateJavascript(DownloadSites.fillScript(source),value->toast("true".equals(value)?"已填入，请在网站点击解析":"输入框尚未就绪，可复制链接手动粘贴"));});
             external.setOnClickListener(v->{if(!source.isEmpty())copyDownloadSource(source);try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(site.url)));}catch(Exception e){toast("未找到浏览器");}});
-            view.setDownloadListener((download,agent,disposition,mime,length)->offerWebsiteDownload(view,session,results,download,agent,disposition,mime));
+
         }
+        view.setDownloadListener((download,agent,disposition,mime,length)->offerWebsiteDownload(view,session,results,download,agent,disposition,mime));
         Button retry=button("完成验证 / 登录后重试多路搜索",0xFF6650BA);root.addView(retry,root.indexOfChild(view));
         retry.setOnClickListener(v->{android.webkit.CookieManager.getInstance().flush();String original=source.isEmpty()?url:source;stopWebPreview();parseSharedLink(original);});
         view.getSettings().setJavaScriptEnabled(true);view.getSettings().setDomStorageEnabled(true);view.getSettings().setAllowFileAccess(false);view.getSettings().setAllowContentAccess(false);

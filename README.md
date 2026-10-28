@@ -1,8 +1,16 @@
-# 水印工坊 0.6.17 · Android
+# 水印工坊 0.6.18 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 23。沿用原工程签名，可以覆盖安装 0.6.16。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 24。沿用原工程签名，可以覆盖安装 0.6.17。
 
-## 本次更新 0.6.17
+## 本次更新 0.6.18
+
+- 按手机本机优先适配 4 项能力入口：res-downloader 对应网页素材捕获；Youwee / VidBee 对应共用 yt-dlp 的手机通用下载；Telegram 对应公开帖子图片与视频保存。完整桌面程序和 Telegram 用户脚本没有移植，也未将同一引擎冒充成多个独立解析接口。
+- 新增本机下载工作台，可选择平台引擎源画质、1080p、720p、480p、360p 上限，解析预览或加入保存队列；清晰度约束覆盖全部回退格式。原始 HTTPS 直链保持其格式，音频保存复用原队列提取功能。
+- 注册 Youwee v1 下载链接导入协议，校验 HTTPS、版本、媒体/动作字段与重复参数，支持视频/音频偏好；在本应用内确认解析或加入队列，不自动执行外部下载。YouTube 单条 watch 链接去掉合集附带参数，其他签名 URL 保持不变。
+- 普通原作品网页的下载按钮接入原保存监听，不再仅限第三方解析网站。Telegram 仅接受公开频道具体帖子，排除封面与后续帖子；私有频道、邀请链接及用户脚本仍未移植。当前环境访问 t.me 返回不可访问空壳，实链保存未验证。
+- 未完成：wx_channels_download 依赖桌面微信会话；qiye45/wechatVideoDownload 当前仓库未提供可移植应用源码。这两项入口显示具体限制，不能作为已完成的安卓工具。
+
+## 0.6.17 下载入口扩展
 
 - 收录本次 10 项工具，Cobalt 去重后共 12 个入口。IdeaFlow、酷酷工具、Twitter Video Downloader 加入原有 3 站与原解析的并行搜索，返回的媒体沿用原下载器；入口按站名、项目名、平台关键词筛选。
 - IdeaFlow 按当前网页的公开 GET 请求解析视频、图片与实况视频；拒绝/验证失败会退回原站网页。网页采集补齐实况字段、图片数组和跳转后的结果页续采，不把封面当原图；酷酷工具仅读取网站正常处理后已呈现的下载组件地址。
@@ -148,7 +156,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.17.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.18.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

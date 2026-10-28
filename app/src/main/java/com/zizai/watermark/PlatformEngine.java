@@ -97,7 +97,7 @@ final class PlatformEngine {
                 request.addOption("-f","bestaudio/best");request.addOption("-x");request.addOption("--audio-format","m4a");
             }else{
                 // Prefer AVC/AAC MP4 for Android. Other supported streams remain usable via FFmpeg remux.
-                request.addOption("-f","bestvideo[ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/bestvideo+bestaudio/best");
+                request.addOption("-f",NativeSourceTools.videoFormat(context.getSharedPreferences("download_options",0).getInt("height",0)));
                 request.addOption("--merge-output-format","mp4");request.addOption("--remux-video","mp4");
             }
             execute(context,request,15*60_000,cache,progress,false,item.url);JobControl.check();

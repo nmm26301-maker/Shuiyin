@@ -59,7 +59,7 @@ def main():
     sample = build / 'source.mp4'
     sample.write_bytes(base64.b64decode((ROOT / 'tests/fixtures/probe-video.mp4.base64').read_text().strip(), validate=True))
     tests = {
-        'DownloadSiteTests': [build / 'site-form.js', build / 'site-configs.json'], 'ProviderHttpTests': [], 'ParallelSearchTests': [], 'SearchFailureTests': [],
+        'NativeSourceTests': [build / 'native-formats.json'], 'DownloadSiteTests': [build / 'site-form.js', build / 'site-configs.json'], 'ProviderHttpTests': [], 'ParallelSearchTests': [], 'SearchFailureTests': [],
         'DouyinSearchTests': [], 'DouyinImageTests': [],
         'PlaybackRequestTests': [build / 'scanner.js'],
         'VideoCandidateTests': [sample], 'LinkTests': [sample],
@@ -78,8 +78,9 @@ def main():
         else:
             run('node', ROOT / 'tests' / script, source)
     run('node', ROOT / 'tests/download-site-form-tests.js', build / 'site-form.js')
+    run('python3', ROOT / 'tests/native-format-tests.py', ROOT / 'app/src/main/res/raw/ytdlp', build / 'native-formats.json')
     run('python3', ROOT / 'tests/test-release.py')
-    print('PASS search regression gate: 10 Java suites, 4 actual JavaScript collectors and release guards', flush=True)
+    print('PASS search regression gate: 11 Java suites, 4 actual JavaScript collectors and release guards', flush=True)
 
 
 if __name__ == '__main__':

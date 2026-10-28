@@ -23,12 +23,12 @@ final class DownloadSites {
         new Site("IdeaFlow 解析","https://parse.ideaflow.top/","抖音 小红书 快手 微博 图集 实况 ideaflow","公开分享链接解析 · 视频 / 图片 / 实况统一保存","#app input[type=text]","","解析"),
         new Site("酷酷工具","https://dy.kukutool.com/","小红书 知乎 抖音 微博 快手 去水印 kukutool","网页解析 · 可能要求验证码或登录，请正常完成后重试","input[placeholder=\"粘贴带链接的文本\"],input[placeholder=\"Paste text with link\"]","button.bg-blue-500",""),
         new Site("Twitter Video Downloader","https://twittervideodownloader.com/en/","推特 Twitter X x.com GIF twittervideodownloader","推特 / X 视频与 GIF · 网站表单解析","#tweetURL","#submitBtn",""),
-        new Site("全能视频下载器 · res-downloader","https://github.com/putyy/res-downloader","小红书 抖音 快手 视频号 微信 电脑 Windows macOS Linux","电脑软件 · 需在电脑运行并配置本机代理；打开项目查看安装说明"),
+        new Site("全能视频下载器 · res-downloader","https://github.com/putyy/res-downloader","小红书 抖音 快手 视频号 微信 电脑 Windows macOS Linux","本机适配：网页 HTTPS 素材捕获；电脑系统代理抓包尚未移植"),
         new Site("视频号下载器 · wx_channels_download","https://github.com/ltaoo/wx_channels_download","视频号 微信 Windows macOS 电脑 ltaoo","电脑软件 · 依赖电脑微信及本机服务；手机分享链接不能直接调用"),
         new Site("微信视频下载工具","https://github.com/qiye45/wechatVideoDownload","微信 视频号 直播 回放 电脑 Windows qiye45","电脑工具 · 按项目说明在电脑运行；当前入口提供安装与使用文档"),
-        new Site("Youwee","https://github.com/vanloctech/youwee","YouTube TikTok yt-dlp Windows macOS Linux 电脑","电脑软件 · 基于 yt-dlp；本应用已有同类平台引擎，项目程序需另行安装"),
-        new Site("VidBee","https://github.com/nexmoe/VidBee","多平台 YouTube TikTok Twitter B站 yt-dlp 电脑","电脑软件 / 自建服务 · 需自行运行；打开项目查看官方安装说明"),
-        new Site("Telegram 媒体下载工具","https://github.com/Neet-Nestor/Telegram-Media-Downloader","Telegram 电报 图片 视频 浏览器 脚本 油猴","浏览器用户脚本 · 需支持扩展的浏览器及本人 Telegram 登录；不能直接在应用内运行")
+        new Site("Youwee","https://github.com/vanloctech/youwee","YouTube TikTok yt-dlp Windows macOS Linux 电脑","本机适配：通用下载、清晰度选择及 Youwee 链接导入；完整桌面程序未移植"),
+        new Site("VidBee","https://github.com/nexmoe/VidBee","多平台 YouTube TikTok Twitter B站 yt-dlp 电脑","本机适配：共用 yt-dlp 引擎的下载与保存队列；转录、RSS 等功能未接入"),
+        new Site("Telegram 媒体下载工具","https://github.com/Neet-Nestor/Telegram-Media-Downloader","Telegram 电报 图片 视频 浏览器 脚本 油猴","本机适配：公开帖子图片 / 视频保存；私有会话及浏览器用户脚本未移植")
     ));
     static final List<Site> SEARCH=java.util.Collections.unmodifiableList(ALL.stream().filter(site->site.searchable).collect(java.util.stream.Collectors.toList()));
     static String[] verificationNames(){String[] names=new String[SEARCH.size()+1];names[0]="原平台作品 · 播放 / 登录验证";for(int i=0;i<SEARCH.size();i++)names[i+1]=SEARCH.get(i).name;return names;}

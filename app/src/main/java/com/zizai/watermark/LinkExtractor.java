@@ -152,6 +152,10 @@ public final class LinkExtractor {
             return result;
         }finally{c.disconnect();}
     }
+    static Result parseTelegram(Context context,String input)throws Exception {
+        String page=TelegramPost.embed(input);HttpURLConnection connection=open(page,"",new java.io.File(context.getFilesDir(),"link-cookies.txt"));
+        try{return TelegramPost.parse(new String(limitedRead(connection.getInputStream(),HTML_LIMIT),StandardCharsets.UTF_8),input);}finally{connection.disconnect();}
+    }
     static Result parseDouyin(Context context,String input)throws Exception {
         java.io.File cookies=new java.io.File(context.getFilesDir(),"link-cookies.txt");
         String source=input;if(DouyinParser.id(source).isEmpty())source=resolveShare(context,input);
