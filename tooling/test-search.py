@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--android', required=True, type=pathlib.Path)
     args = parser.parse_args()
     deps, android = args.deps.resolve(), args.android.resolve()
+    # JVM fixtures must not accidentally test a runtime omitted from the Android APK.
+    if "com.microsoft.onnxruntime:onnxruntime-android:1.24.3" not in (ROOT / 'app/build.gradle').read_text():
+        raise RuntimeError('Android build is missing the pinned BGM inference dependency')
     if not android.is_file():
         parser.error('Android platform jar is missing')
     run('python3', ROOT / 'tooling/prepare-engine.py', '--dir', deps)
