@@ -13,34 +13,33 @@ import org.json.*;
 
 /** Uses each site's own form. No guessed JSON endpoints or challenge bypass. */
 final class WebsiteSearch {
-    private static final String[] INPUT={"#link-area","#main_page_text","input.n-input__input-el"};
-    private static final String[] BUTTON={"#download-button","#submit","button.button-1"};
     static LinkExtractor.Result parse(Activity activity,int index,String source)throws Exception {
-        long started=System.nanoTime();JobControl.check();String apiError=index==0?"未配置授权 Cobalt API，当前使用网页辅助":"";
+        long started=System.nanoTime();JobControl.check();DownloadSites.Site site=DownloadSites.SEARCH.get(index);String apiError=index==0?"未配置授权 Cobalt API，当前使用网页辅助":"";
         android.content.SharedPreferences prefs=activity.getSharedPreferences("link_settings",0);
         try{
+            if(site.url.equals("https://parse.ideaflow.top/"))return ProviderHttp.ideaFlow(source);
             if(index==1)return ProviderHttp.tiktokio(source);
             if(index==0&&!prefs.getString("cobalt_endpoint","").isEmpty())return ProviderHttp.cobalt(source,prefs.getString("cobalt_endpoint",""),prefs.getString("cobalt_key",""));
         }catch(Exception error){JobControl.check();apiError=error.getMessage()==null?"接口请求失败":error.getMessage();}
-        JobControl.check();DownloadSites.Site site=DownloadSites.ALL.get(index);
+        JobControl.check();
         String script;try(InputStream in=activity.getResources().openRawResource(R.raw.search_sites);ByteArrayOutputStream out=new ByteArrayOutputStream()){
             byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);script=out.toString("UTF-8");
         }
-        JSONObject config=new JSONObject().put("source",source).put("input",INPUT[index]).put("button",BUTTON[index]);
-        Session session=new Session(activity,site,source,script.replace("/*CONFIG*/",config.toString()));
+        JSONObject config=new JSONObject().put("source",source).put("input",site.input).put("button",site.button).put("buttonText",site.buttonText);
+        Session session=new Session(activity,site,source,script,config);
         session.ui.post(session::start);
         try{
             long deadline=started+TimeUnit.SECONDS.toNanos(38);
             while(!session.latch.await(150,TimeUnit.MILLISECONDS)){JobControl.check();if(System.nanoTime()>deadline)break;}
-            JobControl.check();synchronized(session.result){if(!session.result.items.isEmpty()){LinkExtractor.Result copy=new LinkExtractor.Result();copy.source=session.result.source;copy.title=session.result.title;for(LinkExtractor.Item item:session.result.items)copy.addItem(item);return copy;}}
+            JobControl.check();synchronized(session.result){if(!session.result.items.isEmpty()){LinkExtractor.Result copy=new LinkExtractor.Result();copy.source=session.result.source;copy.title=session.result.title;copy.description=session.result.description;for(LinkExtractor.Item item:session.result.items)copy.addItem(item);return copy;}}
             throw new IOException((apiError.isEmpty()?"":apiError+"；")+(session.error.isEmpty()?"网页未返回素材，可用网站验证后重试":session.error));
         }finally{session.ui.post(session::close);}
     }
     private static final class Session {
-        final Activity activity;final DownloadSites.Site site;final String script;final Handler ui=new Handler(Looper.getMainLooper());
+        final Activity activity;final DownloadSites.Site site;final String script;final JSONObject config;boolean submitted;final Handler ui=new Handler(Looper.getMainLooper());
         final CountDownLatch latch=new CountDownLatch(1);final LinkExtractor.Result result=new LinkExtractor.Result();
         WebView view;boolean closed;volatile String error="";int stable;final Runnable tick=this::poll;
-        Session(Activity a,DownloadSites.Site s,String source,String script){activity=a;site=s;this.script=script;result.source=source;result.title=s.name+" 素材";}
+        Session(Activity a,DownloadSites.Site s,String source,String script,JSONObject config){activity=a;site=s;this.script=script;this.config=config;result.source=source;result.title=s.name+" 素材";}
         void start(){
             if(closed||activity.isDestroyed()||activity.isFinishing()){close();return;}
             try{
@@ -66,16 +65,18 @@ final class WebsiteSearch {
                 view.loadUrl(site.url);
             }catch(RuntimeException e){error="网页解析组件不可用";close();}
         }
+        void sessionDescription(JSONObject object){synchronized(result){String text=object.optString("description");if(!text.isEmpty())result.description=text.substring(0,Math.min(6000,text.length()));}}
         void capture(String url,String mime,String disposition,String agent){
             String kind=DownloadSites.mediaKind(url,mime,disposition);if(kind.isEmpty())return;
             synchronized(result){result.addItem(new LinkExtractor.Item(LinkExtractor.Kind.valueOf(kind),url,"网站下载素材",site.url,false,0,agent,result.source));}
         }
         void poll(){
             if(closed||view==null)return;
-            view.evaluateJavascript(script,value->{
+            String code;try{config.put("resume",submitted);code=script.replace("/*CONFIG*/",config.toString());}catch(JSONException e){error="网站表单配置失败";close();return;}
+            view.evaluateJavascript(code,value->{
                 if(closed||view==null)return;
                 try{Object raw=new JSONTokener(value).nextValue();if(raw instanceof String&&((String)raw).length()<500000){
-                    JSONObject object=new JSONObject((String)raw);error=object.optString("error");JSONArray items=object.optJSONArray("items");int before;
+                    JSONObject object=new JSONObject((String)raw);submitted|=object.optBoolean("submitted");sessionDescription(object);error=object.optString("error");JSONArray items=object.optJSONArray("items");int before;
                     synchronized(result){before=result.items.size();if(items!=null)for(int i=0;i<Math.min(24,items.length());i++){
                         JSONObject item=items.optJSONObject(i);if(item==null)continue;try{String url=item.optString("url");if(EngineMetadata.https(url))result.addItem(new LinkExtractor.Item(LinkExtractor.Kind.valueOf(item.optString("kind")),url,item.optString("label","网站素材"),site.url,false,0,view.getSettings().getUserAgentString(),result.source));}catch(IllegalArgumentException ignored){}
                     }stable=result.items.size()>0&&result.items.size()==before?stable+1:0;}

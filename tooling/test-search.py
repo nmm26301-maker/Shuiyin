@@ -52,11 +52,14 @@ def main():
     jars = [json_jar, android] + sorted(p for p in deps.glob('*.jar') if p.name not in {'android.jar', 'org-json.jar'})
     cp = os.pathsep.join(map(str, [classes] + jars))
     compiler = ['java', 'com.sun.tools.javac.Main', '-source', '17', '-target', '17', '-encoding', 'UTF-8', '-classpath', cp, '-d', classes]
-    run(*compiler, *sources, generated)
+    # Compile production against Android's API contracts; real JSON is for JVM execution only.
+    production_compiler = compiler.copy()
+    production_compiler[production_compiler.index('-classpath') + 1] = os.pathsep.join(map(str, [classes, android] + [j for j in jars if j != android]))
+    run(*production_compiler, *sources, generated)
     sample = build / 'source.mp4'
     sample.write_bytes(base64.b64decode((ROOT / 'tests/fixtures/probe-video.mp4.base64').read_text().strip(), validate=True))
     tests = {
-        'ProviderHttpTests': [], 'ParallelSearchTests': [], 'SearchFailureTests': [],
+        'DownloadSiteTests': [build / 'site-form.js', build / 'site-configs.json'], 'ProviderHttpTests': [], 'ParallelSearchTests': [], 'SearchFailureTests': [],
         'DouyinSearchTests': [], 'DouyinImageTests': [],
         'PlaybackRequestTests': [build / 'scanner.js'],
         'VideoCandidateTests': [sample], 'LinkTests': [sample],
@@ -70,9 +73,13 @@ def main():
         ('web-scanner-tests.js', build / 'scanner.js'),
         ('douyin-browser-scanner-tests.js', build / 'scanner.js'),
     ]:
-        run('node', ROOT / 'tests' / script, source)
+        if script == 'parallel-site-script-tests.js':
+            run('node', ROOT / 'tests' / script, source, build / 'site-configs.json')
+        else:
+            run('node', ROOT / 'tests' / script, source)
+    run('node', ROOT / 'tests/download-site-form-tests.js', build / 'site-form.js')
     run('python3', ROOT / 'tests/test-release.py')
-    print('PASS search regression gate: 9 Java suites, 3 actual JavaScript collectors and release guards', flush=True)
+    print('PASS search regression gate: 10 Java suites, 4 actual JavaScript collectors and release guards', flush=True)
 
 
 if __name__ == '__main__':

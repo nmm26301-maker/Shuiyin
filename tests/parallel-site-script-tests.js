@@ -1,17 +1,17 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const template=fs.readFileSync(process.argv[2],'utf8');let checks=0;
 function check(value,why){assert.ok(value,why);checks++;}
-function fixture(host='tiktokio.bio'){
-  const state={submitted:0,fields:[],anchors:[],body:'',response:{},store:null,queries:[]};
+function fixture(host='tiktokio.bio',resume=false){
+  const state={submitted:0,fields:[],anchors:[],body:'',response:{},store:null,queries:[],buttons:[]};
   class HTMLInputElement {set value(v){state.value=v;}dispatchEvent(e){state.fields.push(e.type);}}
   class HTMLAnchorElement {constructor(url,text='',download=''){this.href=url;this.textContent=text;this.attrs={};if(download!==null)this.attrs.download=download;}
     hasAttribute(k){return Object.hasOwn(this.attrs,k);}getAttribute(k){return this.attrs[k]||'';}click(){state.originalClick=true;}}
   class Event {constructor(type){this.type=type;}}
-  const input=new HTMLInputElement(),button={click(){state.submitted++;}};
+  const input=new HTMLInputElement(),button={textContent:'解析',click(){state.submitted++;}};
   const nuxt={__vue_app__:{config:{globalProperties:{$pinia:{_s:{get(id){assert.strictEqual(id,'video');return state.store;}}}}}}};
-  const document={body:{get innerText(){return state.body;}},querySelector(q){state.queries.push(q);if(q==='#input')return input;if(q==='#button')return button;if(q==='#__nuxt')return nuxt;return null;},querySelectorAll(q){if(q==='a[href]')return state.anchors;return [];}};
+  const document={body:{get innerText(){return state.body;}},querySelector(q){state.queries.push(q);if(q===config.input)return input;if(config.button&&q===config.button)return button;if(q==='#__nuxt')return nuxt;return null;},querySelectorAll(q){if(q==='a[href]')return state.anchors;if(q==='button')return [button,...state.buttons];return [];}};
   const window={HTMLAnchorElement,fetch:async()=>({ok:true,headers:{get:()=> 'application/json'},clone:()=>({text:async()=>JSON.stringify(state.response)})})};
-  const config={source:'https://www.tiktok.com/@test/video/7312345678901234567?sig=a%2Fb',input:'#input',button:'#button'};
+  const config={source:'https://www.tiktok.com/@test/video/7312345678901234567?sig=a%2Fb',input:'#input',button:'#button',resume};
   const context=vm.createContext({window,document,HTMLInputElement,HTMLAnchorElement,Event,location:{href:'https://'+host+'/',hostname:host},URL,Date,Set,setTimeout:f=>f(),DOMParser:class{parseFromString(){return {querySelectorAll:()=>[]};}}});
   const poll=()=>JSON.parse(vm.runInContext(template.replace('/*CONFIG*/',JSON.stringify(config)),context));
   async function response(data){state.response=data;await window.fetch('/parse');await new Promise(resolve=>setImmediate(resolve));return poll();}
@@ -40,5 +40,20 @@ function fixture(host='tiktokio.bio'){
   check(r.items.length===2&&r.items.some(x=>x.kind==='AUDIO'&&x.url.endsWith('a%2Fb')&&x.label==='background.mp3'),'documented Cobalt album audio and filename retained');
   f=fixture('cobalt.tools');f.poll();r=await f.response({status:'picker',audio:'https://user:secret@cdn.example.org/music',picker:[{type:'photo',url:'https://cdn.example.org/photo.jpg'}]});
   check(r.items.length===1&&r.items[0].kind==='IMAGE','unsafe background audio excluded without losing photos');
+  f=fixture('parse.ideaflow.top');f.config.button='';f.config.buttonText='解析';f.poll();check(f.state.submitted===1,'IdeaFlow visible parse button selected by exact label');
+  r=await f.response({code:200,data:{title:'work caption',cover_url:'https://cdn.example.org/cover.jpg',video_url:'https://cdn.example.org/play?sig=a%2Fb',images:[{url:'https://cdn.example.org/image.jpg',live_photo_url:'https://cdn.example.org/live?sig=1'},'https://cdn.example.org/second.jpg']}});
+  check(r.items.filter(x=>x.kind==='VIDEO').length===2&&r.items.filter(x=>x.kind==='IMAGE').length===2,'IdeaFlow response photo and live video collected, opaque URLs retained');
+  check(!r.items.some(x=>x.url.includes('cover.jpg'))&&r.description==='work caption','no cover masquerading as photo; caption retained');
+  f=fixture('dy.kukutool.com');f.poll();r=await f.response({code:500,msg:'需要人工验证'});check(r.items.length===0&&r.error.includes('需要人工验证'),'new provider errors surfaced without false media');
+  f=fixture('dy.kukutool.com');f.poll();r=await f.response({status:0,encrypt:true,data:'opaque-site-response'});check(r.items.length===0,'encrypted response not decoded or mistaken for a URL');
+  f.state.buttons.push({'__reactFiber$fixture':{memoizedProps:{type:'video',url:'https://cdn.example.org/rendered?sig=a%2Fb',account:{token:'never-export'}},return:{memoizedProps:{type:'image',files:[{url:'https://cdn.example.org/p.jpg'}]},return:null}}});
+  r=f.poll();check(r.items.length===2&&r.items.some(x=>x.kind==='VIDEO'&&x.url.endsWith('a%2Fb')),'KuKu normal rendered download props captured after site processing');
+  check(!JSON.stringify(r).includes('never-export')&&!JSON.stringify(r).includes('opaque-site-response'),'rendered prop collector exports only whitelisted public media');
+  f=fixture('twittervideodownloader.com',true);f.state.anchors=[new f.HTMLAnchorElement('https://video.twimg.com/clip.mp4?tag=12','Download Video')];r=f.poll();
+  check(r.items.length===1&&r.items[0].url.includes('tag=12'),'full-page POST navigation resumes collection on result page');
+  check(f.state.submitted===0,'result page never submits another form');
+  if(process.argv[3])for(const site of JSON.parse(fs.readFileSync(process.argv[3],'utf8'))){
+    f=fixture(new URL(site.url).hostname);Object.assign(f.config,site);f.poll();check(f.state.submitted===1,'production form config submits '+site.url);
+  }
   console.log('PASS parallel website scripts: '+checks+' checks');
 })().catch(e=>{console.error(e);process.exit(1);});

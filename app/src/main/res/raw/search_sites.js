@@ -1,6 +1,6 @@
 (function(config){
   if(window.__wmSearchPoll)return window.__wmSearchPoll();
-  var media=[],submitted=false,filledInput=null,error='',started=Date.now(),baseline=new Set();
+  var media=[],submitted=!!config.resume,filledInput=null,error='',description='',started=Date.now(),baseline=new Set();
   function kind(url,label){
     var s=String(label||'').toLowerCase();try{var p=new URL(url,location.href).pathname.toLowerCase();
       if(/\.(mp3|m4a|aac|ogg|opus|wav|flac)$/.test(p)||/mp3|audio|音频/.test(s))return 'AUDIO';
@@ -23,9 +23,11 @@
   });}
   function object(value,depth,context){
     if(!value||typeof value!=='object'||depth>6)return;
-    if(Array.isArray(value)){value.slice(0,30).forEach(v=>object(v,depth+1,context));return;}
+    if(Array.isArray(value)){value.slice(0,30).forEach(v=>{if(typeof v==='string'&&/^(images|photos|pics)$/.test(context))add(v,'IMAGE','图片');else object(v,depth+1,context);});return;}
     // Only complete Cobalt outputs: separated tracks are not complete downloadable videos.
     if(value.status==='local-processing'){error='该站返回分离音视频，请用原解析引擎合并';return;}
+    if(typeof value.title==='string'&&/^(data|result)$/.test(context))description=value.title.slice(0,6000);
+    if(value.code!==undefined&&Number(value.code)!==200&&Number(value.code)!==0&&value.msg)error='网站返回：'+String(value.msg).slice(0,180);
     if(value.status==='error'){error='网站解析失败或要求验证';return;}
     if(value.status==='redirect'||value.status==='tunnel')add(value.url,kind(value.url,value.filename)||'VIDEO',value.filename);
     if(value.success&&value.links&&typeof value.links==='object')Object.keys(value.links).slice(0,24).forEach(label=>{
@@ -33,7 +35,7 @@
       add(value.links[label],kind(value.links[label],label),label);
     });
     var label=String(value.type||value.media_type||value.mimeType||value.mime||value.format||context||'');
-    ['download_url','downloadUrl','video_url','videoUrl','play_url','playUrl','resource_url','resourceUrl'].forEach(k=>{if(typeof value[k]==='string')add(value[k],kind(value[k],label)||(/video|play/i.test(k)?'VIDEO':''),label);});
+    ['download_url','downloadUrl','video_url','videoUrl','play_url','playUrl','resource_url','resourceUrl','live_photo_url'].forEach(k=>{if(typeof value[k]==='string')add(value[k],(/video|play|live_photo/i.test(k)?'VIDEO':kind(value[k],label)),label);});
     if(typeof value.url==='string'&&/video|audio|image|photo|mp4|mp3/i.test(label))add(value.url,kind(value.url,label),label);
     if(value.status==='picker'){
       add(value.audio,'AUDIO',value.audioFilename||'图集背景音频');
@@ -77,9 +79,26 @@
       });
     }catch(e){}
   }
+  function kukuResult(){
+    // Read the site's rendered download component props after its normal parsing/verification.
+    // Do not reproduce signing/decryption or traverse account/session state.
+    if(location.hostname!=='dy.kukutool.com')return;
+    document.querySelectorAll('button').forEach(button=>{
+      try{var key=Object.keys(button).find(k=>k.indexOf('__reactFiber$')===0),fiber=key&&button[key];
+        for(var depth=0;fiber&&depth<6;depth++,fiber=fiber.return){
+          var props=fiber.memoizedProps||{},type=String(props.type||'').toUpperCase();
+          if(/^(VIDEO|AUDIO|IMAGE)$/.test(type)){
+            add(props.url,type,type==='IMAGE'?'网站图片':type==='AUDIO'?'网站音频':'网站视频');
+            if(Array.isArray(props.files))props.files.slice(0,24).forEach(file=>{if(file&&typeof file==='object')add(file.url,type,'网站素材');});
+          }
+        }
+      }catch(e){}
+    });
+  }
   window.__wmSearchPoll=function(){
     if(!submitted){
-      var input=document.querySelector(config.input),button=document.querySelector(config.button);
+      var input=document.querySelector(config.input),button=config.button?document.querySelector(config.button):null;
+      if(!button&&config.buttonText)button=Array.from(document.querySelectorAll('button')).find(b=>(b.textContent||'').trim()===config.buttonText);
       if(input&&button&&!input.disabled){
         if(filledInput!==input){
           var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,config.source);
@@ -91,14 +110,14 @@
         }
       }
     }else{
-      links(document);greenResult();document.querySelectorAll('#target video,#target audio,.result video,.result audio').forEach(v=>{var type=v.tagName==='AUDIO'?'AUDIO':'VIDEO';add(v.currentSrc,type,'网站播放素材');add(v.src,type,'网站播放素材');});
+      links(document);greenResult();kukuResult();document.querySelectorAll('#target video,#target audio,.result video,.result audio').forEach(v=>{var type=v.tagName==='AUDIO'?'AUDIO':'VIDEO';add(v.currentSrc,type,'网站播放素材');add(v.src,type,'网站播放素材');});
     }
     var text=(document.body&&document.body.innerText||'').slice(0,12000);
     if(submitted){var failure=document.querySelector('#errorContainer,.n-message--error .n-message__content,.alert-danger');
       if(failure&&failure.textContent&&failure.textContent.trim())error='网站返回：'+failure.textContent.trim().slice(0,180);
     }
     if(Date.now()-started>8000&&/verify you are human|just a moment|请完成验证|请输入验证码/i.test(text))error='网站要求人工验证';
-    return JSON.stringify({submitted:submitted,items:media,error:error});
+    return JSON.stringify({submitted:submitted,items:media,error:error,description:description});
   };
   return window.__wmSearchPoll();
 })(/*CONFIG*/)

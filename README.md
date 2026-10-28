@@ -1,8 +1,15 @@
-# 水印工坊 0.6.16 · Android
+# 水印工坊 0.6.17 · Android
 
-面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 22。沿用原工程签名，可以覆盖安装 0.6.15。
+面向 Android 10 及以上 arm64 手机的开发测试版；目标 Android 13，versionCode 23。沿用原工程签名，可以覆盖安装 0.6.16。
 
-## 本次更新 0.6.16
+## 本次更新 0.6.17
+
+- 收录本次 10 项工具，Cobalt 去重后共 12 个入口。IdeaFlow、酷酷工具、Twitter Video Downloader 加入原有 3 站与原解析的并行搜索，返回的媒体沿用原下载器；入口按站名、项目名、平台关键词筛选。
+- IdeaFlow 按当前网页的公开 GET 请求解析视频、图片与实况视频；拒绝/验证失败会退回原站网页。网页采集补齐实况字段、图片数组和跳转后的结果页续采，不把封面当原图；酷酷工具仅读取网站正常处理后已呈现的下载组件地址。
+- res-downloader、wx_channels_download、wechatVideoDownload、Youwee、VidBee、Telegram-Media-Downloader 提供准确的官方项目入口与运行环境说明。它们需要电脑软件、自建服务或浏览器扩展，不伪装成手机可直接调用的公共 API；本次未移植其代码。
+- 验证页面选择器动态列出全部 6 个网站。Cobalt 授权、网站人工验证码及原有下载/修复流程不变。公网实测新增站点首页可访问，但 IdeaFlow 解析请求返回 HTTP 403；尚未验证新增 3 站的真实下载均成功。
+
+## 0.6.16 抖音页面兼容
 
 - 抖音网页采集补齐 `awemeId`、`playAddr[].src`、`playAddr.urlList`、`bitRateList` 和 `__pace_f` 分块页面数据；仍仅提取 URL 指向的作品，排除推荐内容、账号字段、受限及加密视频。
 - 自动网页路线访问标准作品页，与移动分享页 HTTP 路线互补；短链接正常跳转取得作品编号后，仅切换一次标准作品页。
@@ -141,7 +148,7 @@ python3 tooling/prepare-engine.py --dir /path/to/dependencies
 python3 tooling/build-offline.py --sdk /path/to/sdk --deps /path/to/dependencies --ecj /path/to/ecj.jar
 ```
 
-输出 build-offline/WatermarkWorkshop-0.6.16.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
+输出 build-offline/WatermarkWorkshop-0.6.17.apk。使用 JDK 的 javac 时可省略 --ecj。开发签名 tooling/development.jks，别名 androiddebugkey，密码 android。签名 SHA-256：7836a7e960d91ec268d48048c0505e84fbda3bdeafe2648c5f24bc6aef8b0bdb。
 
 图集源码及许可证包含在 app/src/main/res/raw/gallery_bundle ZIP；六个 Python 包均为校验固定的纯 Python wheel。tooling/gallery-lock.json 保留下载地址与 SHA-256。重建同一图集包运行 `python3 tooling/prepare-gallery.py --cache /path/to/wheels`；修改 runner 或依赖后需同步 GalleryEngine.SHA，测试会校验一致性。
 

@@ -8,6 +8,7 @@ import org.json.*;
 
 /** Explicit public-form/authorized-instance protocols; never derives protected API tokens. */
 final class ProviderHttp {
+    interface Decoder {LinkExtractor.Result parse(String json,String share,String endpoint)throws Exception;}
     interface Opener {HttpURLConnection open(String url)throws Exception;}
     private static final Opener PUBLIC=url->{LinkExtractor.ensurePublic(url);return (HttpURLConnection)new URL(url).openConnection();};
     static final String AGENT="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36";
@@ -17,6 +18,10 @@ final class ProviderHttp {
     }
     static LinkExtractor.Result tiktokio(String share)throws Exception{return execute(tiktokioRequest(share),share,false,PUBLIC);}
     static LinkExtractor.Result cobalt(String share,String endpoint,String key)throws Exception{return execute(cobaltRequest(share,endpoint,key),share,true,PUBLIC);}
+    static LinkExtractor.Result ideaFlow(String share)throws Exception{return execute(ideaFlowRequest(share),share,ProviderHttp::ideaFlowResult,PUBLIC,12000);}
+    static Request ideaFlowRequest(String share)throws Exception {
+        return new Request("https://parse.ideaflow.top/video/share/url/parse?url="+URLEncoder.encode(share,StandardCharsets.UTF_8.name()),"","https://parse.ideaflow.top/","",null);
+    }
     static Request tiktokioRequest(String share){
         String boundary="----WatermarkForm"+UUID.randomUUID().toString().replace("-","");
         String body="--"+boundary+"\r\nContent-Disposition: form-data; name=\"page\"\r\n\r\n"+share+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"ajax\"\r\n\r\n1\r\n--"+boundary+"--\r\n";
@@ -32,16 +37,19 @@ final class ProviderHttp {
         return execute(request,share,cobalt,opener,12000);
     }
     static LinkExtractor.Result execute(Request request,String share,boolean cobalt,Opener opener,long budgetMs)throws Exception {
+        return execute(request,share,cobalt?ProviderHttp::cobaltResult:(json,source,endpoint)->tiktokioResult(json,source),opener,budgetMs);
+    }
+    static LinkExtractor.Result execute(Request request,String share,Decoder decoder,Opener opener,long budgetMs)throws Exception {
         long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(budgetMs);checkDeadline(deadline);
         JobControl.check();HttpURLConnection connection=opener.open(request.url);
         try{
             checkDeadline(deadline);int timeout=(int)Math.max(1,Math.min(4000,java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(deadline-System.nanoTime())));
-            connection.setInstanceFollowRedirects(false);connection.setRequestMethod("POST");connection.setConnectTimeout(timeout);connection.setReadTimeout(timeout);connection.setDoOutput(true);
+            connection.setInstanceFollowRedirects(false);connection.setRequestMethod(request.body==null?"GET":"POST");connection.setConnectTimeout(timeout);connection.setReadTimeout(timeout);connection.setDoOutput(request.body!=null);
             connection.setRequestProperty("Accept","application/json");connection.setRequestProperty("Content-Type",request.contentType);connection.setRequestProperty("User-Agent",WebSessionCookies.userAgent(AGENT));
             if(!request.referer.isEmpty())connection.setRequestProperty("Referer",request.referer);
             if(!request.authorization.isEmpty())connection.setRequestProperty("Authorization",request.authorization);
             String cookies=WebSessionCookies.header(request.url);if(!cookies.isEmpty())connection.setRequestProperty("Cookie",cookies);
-            connection.setFixedLengthStreamingMode(request.body.length);try(OutputStream out=connection.getOutputStream()){out.write(request.body);}
+            if(request.body!=null){connection.setFixedLengthStreamingMode(request.body.length);try(OutputStream out=connection.getOutputStream()){out.write(request.body);}}
             checkDeadline(deadline);int status=connection.getResponseCode();WebSessionCookies.receive(request.url,connection.getHeaderFields());checkDeadline(deadline);
             if(status==401||status==403)throw new IOException("接口拒绝访问（HTTP "+status+"），需要有效授权或正常网页验证");
             if(status>=300&&status<400)throw new IOException("接口返回跳转，未转发授权信息；请填写最终接口地址");
@@ -51,11 +59,23 @@ final class ProviderHttp {
             }
             checkDeadline(deadline);
             if(!text.trim().startsWith("{"))throw new IOException("网站返回网页而非接口结果，可能要求验证");
-            return cobalt?cobaltResult(text,share,request.url):tiktokioResult(text,share);
+            return decoder.parse(text,share,request.referer.isEmpty()?request.url:request.referer);
         }finally{connection.disconnect();}
     }
     private static void checkDeadline(long deadline)throws IOException {
         JobControl.check();if(System.nanoTime()>=deadline)throw new java.net.SocketTimeoutException("解析接口请求超时，继续网页回退");
+    }
+    static LinkExtractor.Result ideaFlowResult(String json,String share,String endpoint)throws Exception {
+        JSONObject body=new JSONObject(json);if(body.optInt("code")!=200)throw new IOException("IdeaFlow 解析失败："+SearchFailure.clean(body.optString("msg","未返回素材"),180));
+        JSONObject data=body.optJSONObject("data");if(data==null)throw new IOException("IdeaFlow 未返回作品数据");
+        LinkExtractor.Result result=result(share,"IdeaFlow 素材");result.title=data.optString("title","IdeaFlow 素材");result.description=data.optString("title","");
+        add(result,"VIDEO",data.optString("video_url"),"视频",endpoint);
+        JSONArray images=data.optJSONArray("images");if(images!=null)for(int i=0;i<Math.min(24,images.length());i++){
+            JSONObject image=images.optJSONObject(i);
+            if(image!=null){add(result,"IMAGE",image.optString("url"),"图片 "+(i+1),endpoint);add(result,"VIDEO",image.optString("live_photo_url"),"实况视频 "+(i+1),endpoint);}
+            else if(images.opt(i) instanceof String)add(result,"IMAGE",images.optString(i),"图片 "+(i+1),endpoint);
+        }
+        return requireItems(result);
     }
     static LinkExtractor.Result tiktokioResult(String json,String share)throws Exception {
         JSONObject object=new JSONObject(json);if(!object.optBoolean("success")){

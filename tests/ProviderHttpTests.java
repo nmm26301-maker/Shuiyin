@@ -87,6 +87,20 @@ public final class ProviderHttpTests {
         for(int i=0;i<24;i++)photos.put(new org.json.JSONObject().put("type","photo").put("url","https://cdn.example.org/"+i+".jpg"));large.put("picker",photos);
         collection=ProviderHttp.cobaltResult(large.toString(),share,cobalt.url);
         check(collection.items.size()==24&&collection.count(LinkExtractor.Kind.AUDIO)==1,"audio retained within shared 24-item limit");
+        ProviderHttp.Request idea=ProviderHttp.ideaFlowRequest(share);
+        check(java.net.URLDecoder.decode(idea.url.substring(idea.url.indexOf("?url=")+5),"UTF-8").equals(share),"IdeaFlow encodes complete signed share exactly once");
+        String ideaJson=new JSONObject().put("code",200).put("data",new JSONObject().put("title","caption").put("video_url","https://cdn.example.org/movie?sig=a%2Fb")
+            .put("cover_url","https://cdn.example.org/cover.jpg").put("images",new JSONArray().put(new JSONObject().put("url","https://cdn.example.org/photo.jpg").put("live_photo_url","https://cdn.example.org/live.mp4")))).toString();
+        try(Fixture wire=new Fixture(200,ideaJson,"")){
+            LinkExtractor.Result r=ProviderHttp.execute(idea,share,ProviderHttp::ideaFlowResult,wire::open,12000);
+            check(wire.headers.startsWith("GET / HTTP/1.1")&&wire.body.isEmpty(),"documented IdeaFlow GET has no POST body");
+            check(r.count(LinkExtractor.Kind.VIDEO)==2&&r.count(LinkExtractor.Kind.IMAGE)==1,"public response video, photo and live photo video");
+            check(r.items.stream().noneMatch(i->i.url.contains("cover.jpg")),"cover not mistaken for photo material");
+            check(r.items.get(0).referer.equals("https://parse.ideaflow.top/")&&r.items.get(0).source.equals(share),"new provider handed to existing downloader with original work and site referer");
+            check(r.description.equals("caption")&&r.items.get(0).url.endsWith("a%2Fb"),"caption and exact signed output retained");
+        }
+        rejects(()->ProviderHttp.ideaFlowResult("{\"code\":500,\"msg\":\"站点维护\"}",share,"https://parse.ideaflow.top/"),"站点维护");
+        rejects(()->ProviderHttp.ideaFlowResult("{\"code\":200,\"data\":{\"video_url\":\"http://cdn.example.org/a.mp4\"}}",share,"https://parse.ideaflow.top/"),"未返回");
         System.out.println("PASS native provider HTTP: "+checks+" checks (real local wire, auth, redirects, public form, response adapters)");
     }
 }

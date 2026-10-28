@@ -247,9 +247,9 @@ public class MainActivity extends Activity {
         content.addView(categories,lp(-1,32));
         LinearLayout main=vertical();pad(main,16,21,16,22);
         main.setBackground(round(PANEL,19));
-        TextView intro=text("贴一次分享链接，四路同时搜索素材",17,WHITE,true);
+        TextView intro=text("贴一次分享链接，多路同时搜索素材",17,WHITE,true);
         main.addView(intro,lp(-1,39));
-        main.addView(text("同时交给原解析及三个网站搜索 · 统一保存",12,MUTED,false),lp(-1,26));
+        main.addView(text("原解析及 6 个网站同时搜索 · 统一保存",12,MUTED,false),lp(-1,26));
         gap(main,12);
         LinearLayout entry=horizontal();entry.setBackground(round(WHITE,32));
         linkInput=new EditText(this);
@@ -264,7 +264,7 @@ public class MainActivity extends Activity {
         linkInput.setText(incomingLink);
         incomingLink=LinkExtractor.extractLink(incomingLink);
         gap(main,19);
-        Button parse=button("→  四路搜索素材",0xFF8F61DF);
+        Button parse=button("→  多路搜索素材",0xFF8F61DF);
         main.addView(parse,lp(-1,54));
         parse.setOnClickListener(v->parseSharedLink(linkInput.getText().toString()));
         content.addView(main,lp(-1,-2));gap(content,10);
@@ -272,7 +272,7 @@ public class MainActivity extends Activity {
         Button queue=button("多链接保存队列 · 暂停 / 继续 / 重试",0xFF6650BA);content.addView(queue,lp(-1,48));queue.setOnClickListener(v->showLinkQueue());gap(content,10);
         Button assist=button("网页辅助 · 打开页面后播放视频",PANEL);content.addView(assist,lp(-1,46));
         assist.setOnClickListener(v->{String url=LinkExtractor.extractLink(linkInput.getText().toString());if(url.isEmpty())toast("请先粘贴 HTTPS 分享链接");else{incomingLink=url;showWebAssist(url);}});gap(content,16);
-        Button sites=button("下载入口 · 搜索 Cobalt / TikTokio / GreenVideo",0xFF6650BA);content.addView(sites,lp(-1,48));sites.setOnClickListener(v->{incomingLink=LinkExtractor.extractLink(linkInput.getText().toString());showDownloadSites();});gap(content,10);
+        Button sites=button("下载入口 · 12 项网站与开源工具",0xFF6650BA);content.addView(sites,lp(-1,48));sites.setOnClickListener(v->{incomingLink=LinkExtractor.extractLink(linkInput.getText().toString());showDownloadSites();});gap(content,10);
         Button platforms=button("国内外平台 · 查看解析能力",0xFF233B4B);content.addView(platforms,lp(-1,44));platforms.setOnClickListener(v->{incomingLink=LinkExtractor.extractLink(linkInput.getText().toString());showPlatformCoverage();});gap(content,14);
         LinearLayout results=vertical();content.addView(results,lp(-1,-2));
         if(extracted!=null){showLinkResults(results,extracted);}
@@ -291,18 +291,18 @@ public class MainActivity extends Activity {
             }
         }
         gap(content,16);
-        content.addView(text("原解析与 Cobalt、TikTokio、GreenVideo 同时搜索，合并结果后统一下载。网站验证、超时或不支持会单独显示；封面仍标注为封面。",12,MUTED,false),lp(-1,-2));
+        content.addView(text("原解析与 6 个网站同时搜索，合并结果后统一下载。网站验证、超时或不支持会单独显示；封面仍标注为封面。",12,MUTED,false),lp(-1,-2));
     }
     private void parseSharedLink(String input) {parseSharedLink(input,false);}
     private void parseSharedLink(String input,boolean images) {
         if(busy)return;String url=LinkExtractor.extractLink(input);
         if(url.isEmpty()) {toast("请输入有效的 HTTPS 链接");return;}
         extracted=null;incomingLink=url;
-        pendingSearchSite=null;pendingSearchPage=null;startBusy("四路同时搜索素材…");
+        pendingSearchSite=null;pendingSearchPage=null;startBusy("多路同时搜索素材…");
         java.util.concurrent.atomic.AtomicBoolean searchToken=jobCancel;
         Button verify=button("原平台 / 网站验证",PANEL);transferView.addView(verify,lp(-1,44));
-        verify.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("停止本次搜索并打开验证页面").setItems(new String[]{"原平台作品 · 播放 / 登录验证","Cobalt","TikTokio","GreenVideo"},(d,k)->{
-            DownloadSites.Site site=k==0?null:DownloadSites.ALL.get(k-1);String page=site==null?url:site.url;
+        verify.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("停止本次搜索并打开验证页面").setItems(DownloadSites.verificationNames(),(d,k)->{
+            DownloadSites.Site site=k==0?null:DownloadSites.SEARCH.get(k-1);String page=site==null?url:site.url;
             if(busy){
                 if(jobCancel!=searchToken){toast("已有新任务正在进行，请从新任务打开验证");return;}
                 pendingSearchSite=site;pendingSearchPage=page;searchToken.set(true);
@@ -322,7 +322,7 @@ public class MainActivity extends Activity {
     private void copySearchReport(String detail){
         android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
         if(clipboard!=null){
-            String report="水印工坊 0.6.16\n"+SearchFailure.clean(detail,4000);
+            String report="水印工坊 0.6.17\n"+SearchFailure.clean(detail,4000);
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("解析诊断",report));toast("搜索诊断已复制");
         }
     }
@@ -338,7 +338,7 @@ public class MainActivity extends Activity {
             if(!endpoint.isEmpty())try{return LinkExtractor.parsePlatform(url,endpoint);}catch(Exception error){JobControl.check();}
             return parseLocalLink(url,images);
         }));
-        for(int i=0;i<DownloadSites.ALL.size();i++){final int index=i;sources.add(new ParallelSearch.Source(DownloadSites.ALL.get(i).name,()->WebsiteSearch.parse(this,index,url)));}
+        for(int i=0;i<DownloadSites.SEARCH.size();i++){final int index=i;sources.add(new ParallelSearch.Source(DownloadSites.SEARCH.get(i).name,()->WebsiteSearch.parse(this,index,url)));}
         return ParallelSearch.run(url,sources,JobControl.flag(),45000,this::updateProgress);
     }
     private LinkExtractor.Result parseLocalLink(String url)throws Exception {return parseLocalLink(url,false);}
@@ -965,8 +965,8 @@ public class MainActivity extends Activity {
             @Override public View getView(int position,View reuse,ViewGroup parent){TextView t=(TextView)super.getView(position,reuse,parent);t.setTextColor(WHITE);t.setTextSize(16);return t;}
         };a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);content.addView(s,lp(-1,52));return s;
     }
-    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.16")
-        .setMessage("照片与视频在本机处理。四路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
+    private void showAbout(){new AlertDialog.Builder(this).setTitle("水印工坊 · 0.6.17")
+        .setMessage("照片与视频在本机处理。多路搜索会访问原网站，并将分享链接同时交给 Cobalt、TikTokio、GreenVideo、IdeaFlow、酷酷工具与 Twitter Video Downloader；配置专用服务后也会向该服务发送链接。\n\n内置 yt-dlp、Python 与 FFmpeg，支持链接解析、视频 / 音频下载、图片和文案保存。已加入批量图片及视频 Logo 水印、作品管理和视频工具。\n\n本版本按 GPL-3.0 分发，完整工程与依赖构建说明随源码提供。开源组件：yausername/youtubedl-android、yt-dlp/yt-dlp、FFmpeg。\n\n图片擦除与视频多区域修复使用周围像素填补（最多 8 处），移动物体跟踪暂未实现。已加入保留声音的倍速及批量视频。视频渲染暂不支持 HDR。")
         .setPositiveButton("关闭",null).show();}
     private void stopVideoPreview(){if(videoPreview!=null){try{videoPreview.stopPlayback();}catch(Exception ignored){}videoPreview=null;}}
     private void showFiles(){
@@ -1118,9 +1118,9 @@ public class MainActivity extends Activity {
     }
     private void showDownloadSites(){
         if(busy)return;stopVideoPreview();stopWebPreview();linkScreen=true;initRoot();header("搜索下载入口",false);LinearLayout box=scrollBody();
-        box.addView(text("粘贴分享链接，选择网站解析，再将生成的媒体保存到手机。",14,MUTED,false),lp(-1,-2));gap(box,10);
+        box.addView(text("6 个网站可搜索并统一下载；6 项电脑软件 / 浏览器脚本可打开官方项目查看安装说明。",14,MUTED,false),lp(-1,-2));gap(box,10);
         EditText source=new EditText(this);source.setTextColor(WHITE);source.setHintTextColor(MUTED);source.setHint("分享链接（可选）");source.setSingleLine(true);source.setText(incomingLink);box.addView(source,lp(-1,52));
-        EditText search=new EditText(this);search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("搜索网站 / 推特 / 抖音 / 小红书 / B站");search.setSingleLine(true);box.addView(search,lp(-1,52));
+        EditText search=new EditText(this);search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("搜索工具 / 视频号 / YouTube / Telegram");search.setSingleLine(true);box.addView(search,lp(-1,52));
         LinearLayout rows=vertical();box.addView(rows,lp(-1,-2));
         Runnable fill=()->{incomingLink=LinkExtractor.extractLink(source.getText().toString());int count=addDownloadSiteRows(rows,search.getText().toString());if(count==0)rows.addView(text("没有匹配入口，请更换站名或平台关键词。",13,MUTED,false),lp(-1,54));};
         TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void afterTextChanged(Editable e){}public void onTextChanged(CharSequence s,int a,int b,int c){fill.run();}};
@@ -1131,13 +1131,15 @@ public class MainActivity extends Activity {
         rows.removeAllViews();int count=0;DownloadSites.Site recommended=DownloadSites.recommended(incomingLink);
         for(DownloadSites.Site site:DownloadSites.ALL){if(!site.matches(query))continue;count++;
             LinearLayout card=vertical();pad(card,14,12,14,12);card.setBackground(round(PANEL,14));
-            card.addView(text(site.name+(site==recommended?" · 对应平台入口":""),17,WHITE,true),lp(-1,32));
+            card.addView(text(site.name+(site.searchable?" · 在线解析":" · 开源工具")+(site==recommended?" · 对应平台入口":""),17,WHITE,true),lp(-1,-2));
             card.addView(text(site.url+"\n"+site.detail,12,MUTED,false),lp(-1,-2));
-            Button open=button("打开解析并下载",0xFF6650BA);card.addView(open,lp(-1,46));open.setOnClickListener(v->openDownloadSite(site));rows.addView(card,lp(-1,-2));gap(rows,10);
+            Button open=button(site.searchable?"打开解析并下载":"打开官方项目 / 安装说明",0xFF6650BA);card.addView(open,lp(-1,48));open.setOnClickListener(v->openDownloadSite(site));rows.addView(card,lp(-1,-2));gap(rows,10);
         }return count;
     }
     private void openDownloadSite(DownloadSites.Site site){
-        if(busy)return;openWebAssist(site.url,site,incomingLink);
+        if(busy)return;
+        if(!site.searchable){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(site.url)));}catch(Exception e){toast("未找到浏览器，请复制项目网址");copyDownloadSource(site.url);}return;}
+        openWebAssist(site.url,site,incomingLink);
     }
     private void copyDownloadSource(String source){
         android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
@@ -1242,7 +1244,7 @@ public class MainActivity extends Activity {
             external.setOnClickListener(v->{if(!source.isEmpty())copyDownloadSource(source);try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(site.url)));}catch(Exception e){toast("未找到浏览器");}});
             view.setDownloadListener((download,agent,disposition,mime,length)->offerWebsiteDownload(view,session,results,download,agent,disposition,mime));
         }
-        Button retry=button("完成验证 / 登录后重试四路搜索",0xFF6650BA);root.addView(retry,root.indexOfChild(view));
+        Button retry=button("完成验证 / 登录后重试多路搜索",0xFF6650BA);root.addView(retry,root.indexOfChild(view));
         retry.setOnClickListener(v->{android.webkit.CookieManager.getInstance().flush();String original=source.isEmpty()?url:source;stopWebPreview();parseSharedLink(original);});
         view.getSettings().setJavaScriptEnabled(true);view.getSettings().setDomStorageEnabled(true);view.getSettings().setAllowFileAccess(false);view.getSettings().setAllowContentAccess(false);
         view.getSettings().setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);

@@ -20,7 +20,7 @@ public final class SearchFailureTests {
             new ParallelSearch.Source("GreenVideo",()->{throw new IOException("访问平台超时");}));
         try{ParallelSearch.run(share,providers,new AtomicBoolean(),2000,null);throw new AssertionError("empty result");}
         catch(SearchFailure expected){
-            String shown=ExtractionErrors.message(expected);check(shown.startsWith("四路搜索未取得素材"),"aggregate heading preserved");
+            String shown=ExtractionErrors.message(expected);check(shown.startsWith("多路搜索未取得素材"),"aggregate heading preserved");
             for(String name:new String[]{"原解析","分享页","平台引擎","原作品网页","Cobalt","TikTokio","GreenVideo"})check(shown.contains(name+"："),name+" reason survives nested normalization");
             check(shown.contains("有效的访问会话")&&shown.contains("访问平台超时"),"one login/timeout does not erase other sources");
             check(shown.contains("页面作品为空")&&shown.contains("接口拒绝当前链接"),"specific parser failures visible");
